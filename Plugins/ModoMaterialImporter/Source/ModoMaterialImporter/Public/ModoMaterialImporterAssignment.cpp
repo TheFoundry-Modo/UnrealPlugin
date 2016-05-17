@@ -55,21 +55,25 @@ void Assignment::ApplyToMeshes()
 			if (aMeshActor != NULL)
 			{
 				UMeshComponent* meshCompo = aMeshActor->GetStaticMeshComponent();
-				for (int i = 0; i < meshCompo->GetNumMaterials(); i++)
+
+				if (meshCompo != NULL)
 				{
-					UMaterialInterface* material = meshCompo->GetMaterial(i);
-
-					// It seems a UE4 bug, GetNumMaterials contains NULL materials!
-					if (material == NULL)
-						continue;
-
-					std::string strName = (TCHAR_TO_UTF8(*material->GetName()));
-
-					std::map<std::string, UMaterial*>::iterator mat_itr = Materials.find(strName);
-					if (mat_itr != Materials.end())
+					for (int i = 0; i < meshCompo->GetNumMaterials(); i++)
 					{
-						UE_LOG(ModoMaterialImporter, Log, TEXT("Set Material: %s"), *material->GetName());
-						meshCompo->SetMaterial(i, mat_itr->second);
+						UMaterialInterface* material = meshCompo->GetMaterial(i);
+
+						// It seems a UE4 bug, GetNumMaterials contains NULL materials!
+						if (material == NULL)
+							continue;
+
+						std::string strName = (TCHAR_TO_UTF8(*material->GetName()));
+
+						std::map<std::string, UMaterial*>::iterator mat_itr = Materials.find(strName);
+						if (mat_itr != Materials.end())
+						{
+							UE_LOG(ModoMaterialImporter, Log, TEXT("Set Material: %s"), *material->GetName());
+							meshCompo->SetMaterial(i, mat_itr->second);
+						}
 					}
 				}
 			}

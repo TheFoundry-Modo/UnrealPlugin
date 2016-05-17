@@ -16,7 +16,6 @@
 
 #include "ModoMaterialImporterPrivatePCH.h"
 #include "ModoMaterialImporterMaterialCreator.h"
-#include "ModoMaterialImporterTextureManager.h"
 #include "ModoMaterialImporterHelper.h"
 #include "ModoMaterialImporterAssignment.h"
 #include "ModoMaterialImporterLog.h"
@@ -39,6 +38,7 @@ using namespace ModoMaterial;
 using std::vector;
 
 FString MaterialCreator::_path = FString();
+TArray< MaterialCreator::ImageInfo> MaterialCreator::_imageInfo;
 
 bool isExt(const FString &str, const FString &ext)
 {
@@ -334,7 +334,6 @@ UMaterial* CreateMaterial(FString materialName)
 	return Cast<UMaterial>(CreatedAsset);
 }
 
-
 void MaterialCreator::LoadMaterial(FXmlFile *matXml, const FString &path, Assignment* matAssign)
 {
 	FXmlNode *rootNode = matXml->GetRootNode();
@@ -345,6 +344,41 @@ void MaterialCreator::LoadMaterial(FXmlFile *matXml, const FString &path, Assign
 		const TArray< FXmlNode * > matNodes = rootNode->GetChildrenNodes();
 		_path = FString (path);
 		bool usePathRedirect = false;
+		_imageInfo.Empty();
+
+		// Find image nodes firstly, we need image properties for images when creating materials
+		for (int j = 0; j < matNodes.Num(); j++)
+		{
+			FXmlNode *matNode = matNodes[j];
+			FString tag = matNode->GetTag();
+
+			if (tag.Equals(TEXT("ImageFiles"), ESearchCase::CaseSensitive))
+			{
+				TArray<FXmlNode*> imageNodes = matNode->GetChildrenNodes();
+
+				for (int32 i = 0; i < imageNodes.Num(); i++)
+				{
+					FXmlNode* imageNode = imageNodes[i];
+
+					if (imageNode->GetTag().Equals(TEXT("file"), ESearchCase::IgnoreCase))
+					{
+						ImageInfo imageInfo;
+						imageInfo.filename = imageNode->GetAttribute(FString("filename"));
+
+						FString imageCC = imageNode->GetAttribute(FString("color_correction"));
+						UE_LOG(ModoMaterialImporter, Log, TEXT("Load image properties: %s [%s]"), *imageInfo.filename, *imageCC);
+
+						if (imageCC.Equals(TEXT("linear"), ESearchCase::IgnoreCase))
+							imageInfo.colorSpace = ColorSpace::Linear;
+						else
+							imageInfo.colorSpace = ColorSpace::sRGB;
+
+						_imageInfo.Add(imageInfo);
+					}
+				}
+				break;
+			}
+		}
 
 		for (int j = 0; j < matNodes.Num(); j++)
 		{
@@ -352,7 +386,23 @@ void MaterialCreator::LoadMaterial(FXmlFile *matXml, const FString &path, Assign
 			FString tag = matNode->GetTag();
 			FString ptag = FString();
 
-			if (tag.Equals(TEXT("useRootPath"), ESearchCase::CaseSensitive))
+			if (tag.Equals(TEXT("Version"), ESearchCase::CaseSensitive))
+			{
+				FString Content = matNode->GetContent();
+				
+				if (!Content.IsEmpty())
+				{
+					int32 versionNum = FCString::Atoi(*Content);
+
+					if (versionNum > MODO_VER)
+						UE_LOG(ModoMaterialImporter, Log, TEXT("WARNING: The importer is out of date (The XML file is exported from a higher version of MODO)."));
+				}
+			}
+			else if (tag.Equals(TEXT("ImageFiles"), ESearchCase::CaseSensitive))
+			{
+				// already done in the pre-process
+			}
+			else if (tag.Equals(TEXT("useRootPath"), ESearchCase::CaseSensitive))
 			{
 				FString Content = matNode->GetContent();
 
@@ -518,15 +568,17 @@ struct TextureInfo
 {
 	const FXmlNode* node;
 	FString filename;
+	bool isSRGB; 
 };
 
-void FindTextureNodes(const FXmlNode *Node, TArray<TextureInfo>& txtrInfos)
+void MaterialCreator::FindTextureNodes(const FXmlNode *Node, TArray<TextureInfo>& txtrInfos)
 {
 	FString content = Node->GetAttribute("texture");
 	if (!content.IsEmpty()) {
 		TextureInfo txtrInfo;
 		txtrInfo.node = Node;
 		txtrInfo.filename = content;
+		txtrInfo.isSRGB = true;
 		txtrInfos.Add(txtrInfo);
 		return;
 	}
@@ -538,6 +590,17 @@ void FindTextureNodes(const FXmlNode *Node, TArray<TextureInfo>& txtrInfos)
 			TextureInfo txtrInfo;
 			txtrInfo.node = childNodes[i];
 			txtrInfo.filename = childNodes[i]->GetAttribute("filename");
+			txtrInfo.isSRGB = true;
+
+			FString imgProIdx = childNodes[i]->GetAttribute("fileIndex");
+
+			if (!imgProIdx.IsEmpty())
+			{
+				int32 index = FCString::Atoi(*imgProIdx);
+
+				txtrInfo.isSRGB = (_imageInfo[index].colorSpace == ColorSpace::sRGB) ? true : false;
+			}
+
 			txtrInfos.Add(txtrInfo);
 		}
 	}
@@ -555,11 +618,12 @@ bool MaterialCreator::AddFloatParam(FXmlNode *Node, UMaterial* mat, FMaterialInp
 		{
 			const FString& content = textureNodeInfos[i].filename;
 			const FXmlNode*	texNode = textureNodeInfos[i].node;
+			const bool isSRGB = textureNodeInfos[i].isSRGB;
 
 			if (!content.IsEmpty() && isTextureFileName(content))
 			{
 				ModoMaterial::TextureManager * texManager = ModoMaterial::TextureManager::Instance();
-				UTexture* tex = texManager->LoadTexture(*content, &_path);
+				UTexture* tex = texManager->LoadTexture(*content, &_path, isSRGB);
 				if (tex)
 				{
 					FString wrapU = texNode->GetAttribute("wrapU");
@@ -583,7 +647,10 @@ bool MaterialCreator::AddFloatParam(FXmlNode *Node, UMaterial* mat, FMaterialInp
 						uvChannelIndex = FCString::Atoi(*uvChannelIndexStr);
 
 					FAssetRegistryModule::AssetCreated(tex);
-					LinkTexture<float>(mat, tex, &matInput, graphOffset, tiling, uvChannelIndex, outIndex);
+
+					EMaterialSamplerType type;
+					type = (isSRGB == true) ? SAMPLERTYPE_Color : SAMPLERTYPE_LinearColor;
+					LinkTexture<float>(mat, tex, &matInput, graphOffset, tiling, uvChannelIndex, outIndex, type);
 
 					anyTextureUsed = true;
 				}
@@ -623,11 +690,12 @@ bool MaterialCreator::AddVectorParam(FXmlNode *Node, UMaterial* mat, FMaterialIn
 		{
 			const FString& content = textureNodeInfos[i].filename;
 			const FXmlNode*	texNode = textureNodeInfos[i].node;
+			const bool isSRGB = textureNodeInfos[i].isSRGB;
 
 			if (!content.IsEmpty() && isTextureFileName(content))
 			{
 				ModoMaterial::TextureManager * texManager = ModoMaterial::TextureManager::Instance();
-				UTexture* tex = texManager->LoadTexture(*content, &_path);
+				UTexture* tex = texManager->LoadTexture(*content, &_path, isSRGB);
 				if (tex)
 				{
 					FString wrapU = texNode->GetAttribute("wrapU");
@@ -691,11 +759,12 @@ bool MaterialCreator::AddColorParam(FXmlNode *Node, UMaterial* mat, FMaterialInp
 		{
 			const FString& content = textureNodeInfos[i].filename;
 			const FXmlNode*	texNode = textureNodeInfos[i].node;
+			const bool isSRGB = textureNodeInfos[i].isSRGB;
 
 			if (!content.IsEmpty() && isTextureFileName(content))
 			{
 				ModoMaterial::TextureManager * texManager = ModoMaterial::TextureManager::Instance();
-				UTexture* tex = texManager->LoadTexture(*content, &_path);
+				UTexture* tex = texManager->LoadTexture(*content, &_path, isSRGB);
 				if (tex)
 				{
 					FString wrapU = texNode->GetAttribute("wrapU");
@@ -719,7 +788,10 @@ bool MaterialCreator::AddColorParam(FXmlNode *Node, UMaterial* mat, FMaterialInp
 						uvChannelIndex = FCString::Atoi(*uvChannelIndexStr);
 
 					FAssetRegistryModule::AssetCreated(tex);
-					LinkTexture<FColor>(mat, tex, &matInput, graphOffset, tiling, uvChannelIndex, outIndex);
+
+					EMaterialSamplerType type;
+					type = (isSRGB == true) ? SAMPLERTYPE_Color : SAMPLERTYPE_LinearColor;
+					LinkTexture<FColor>(mat, tex, &matInput, graphOffset, tiling, uvChannelIndex, outIndex, type);
 
 					anyTextureUsed = true;
 				}
@@ -765,11 +837,12 @@ void MaterialCreator::AddUnkownParam(FXmlNode *Node, UMaterial* mat, int &graphO
 		{
 			const FString& content = textureNodeInfos[i].filename;
 			const FXmlNode*	texNode = textureNodeInfos[i].node;
+			const bool isSRGB = textureNodeInfos[i].isSRGB;
 
 			if (!content.IsEmpty() && isTextureFileName(content))
 			{
 				ModoMaterial::TextureManager * texManager = ModoMaterial::TextureManager::Instance();
-				UTexture* tex = texManager->LoadTexture(*content, &_path);
+				UTexture* tex = texManager->LoadTexture(*content, &_path, isSRGB);
 				if (tex)
 				{
 					FString wrapU = texNode->GetAttribute("wrapU");
@@ -793,7 +866,10 @@ void MaterialCreator::AddUnkownParam(FXmlNode *Node, UMaterial* mat, int &graphO
 						uvChannelIndex = FCString::Atoi(*uvChannelIndexStr);
 
 					FAssetRegistryModule::AssetCreated(tex);
-					LinkTexture<FColor>(mat, tex, NULL, graphOffset, tiling, uvChannelIndex, outIndex);
+
+					EMaterialSamplerType type;
+					type = (isSRGB == true) ? SAMPLERTYPE_Color : SAMPLERTYPE_LinearColor;
+					LinkTexture<FColor>(mat, tex, NULL, graphOffset, tiling, uvChannelIndex, outIndex, type);
 
 					anyTextureUsed = true;
 				}

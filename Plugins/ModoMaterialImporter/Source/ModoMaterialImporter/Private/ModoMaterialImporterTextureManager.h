@@ -29,12 +29,14 @@ using std::string;
 
 namespace ModoMaterial
 {
+	enum class ColorSpace {sRGB, Linear};
+
 	class TextureManager
 	{
 	public:
 
 		static TextureManager* Instance();
-		UTexture* LoadTexture (const FString& TextureFilename, const FString* path);
+		UTexture* LoadTexture (const FString& TextureFilename, const FString* path, bool isSRGB);
 
 	private:
 

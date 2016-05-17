@@ -44,7 +44,7 @@ TextureManager::~TextureManager()
 
 }
 
-UTexture* TextureManager::LoadTexture(const FString& TextureFilename, const FString* path = NULL)
+UTexture* TextureManager::LoadTexture(const FString& TextureFilename, const FString* path = NULL, bool isSRGB = true)
 {
 	FString Filename;
 	bool isRelativePath = FPaths::IsRelative(TextureFilename);
@@ -71,8 +71,14 @@ UTexture* TextureManager::LoadTexture(const FString& TextureFilename, const FStr
 
 	// Find if the texture exists anywhere in the content, in any package
 	UTexture* tex = FindObjectFast<UTexture>(NULL, *AssetName, false, true);
-	if (tex)
+	if (tex) {
+		if (tex->SRGB != isSRGB)
+		{
+			tex->SRGB = isSRGB;
+			tex->PostEditChange();
+		}
 		return tex;
+	}
 	
 	// Texture not found, create a new one by binary loading it and packing
 	// it into a new asset package in the root content folder 
@@ -101,6 +107,9 @@ UTexture* TextureManager::LoadTexture(const FString& TextureFilename, const FStr
 
 		if (texAsset)
 		{
+			UTexture* texture = Cast<UTexture>(texAsset);
+			texture->SRGB = isSRGB;
+
 			texAsset->MarkPackageDirty();
 			ULevel::LevelDirtiedEvent.Broadcast();
 			texAsset->PostEditChange();

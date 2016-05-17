@@ -22,6 +22,7 @@
 #include "Materials/MaterialExpression.h"
 
 #include "ModoMaterialImporterAssignment.h"
+#include "ModoMaterialImporterTextureManager.h"
 
 namespace ModoMaterial
 {
@@ -33,11 +34,26 @@ namespace ModoMaterial
 
 	private:
 
+		struct ImageInfo
+		{
+			FString filename;
+			ColorSpace colorSpace; 
+		};
+
+		struct TextureInfo
+		{
+			const FXmlNode* node;
+			FString filename;
+			bool isSRGB; 
+		};
+
+		static void FindTextureNodes(const FXmlNode *Node, TArray<TextureInfo>& txtrInfos);
 		static bool AddFloatParam(FXmlNode *Node, UMaterial* mat, FMaterialInput<float>& matInput, int &graphOffset);
 		static bool AddVectorParam(FXmlNode *Node, UMaterial* mat, FMaterialInput<FVector>& matInput, int &graphOffset, EMaterialSamplerType type);
 		static bool AddColorParam(FXmlNode *Node, UMaterial* mat, FMaterialInput<FColor>& matInput, int &graphOffset);
 		static void AddUnkownParam(FXmlNode *Node, UMaterial* mat, int &graphOffset);
 
 		static FString _path;
+		static TArray< ImageInfo> _imageInfo;
 	};
 }
