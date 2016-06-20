@@ -3,4 +3,4 @@ The Unreal Material Importer is a plug-in for Unreal Engine 4 that you can use t
 
 Old versions of Unreal Plugin are zipped in this branch. ModoMaterialImporter 4.9.2.zip means the plugin for Unreal 4.9.2. The source code inside zips may be compatible or identical among different versions.
 
-None of these old versions is supported by the team anymore.
+None of these old versions is supported by the team anymore. We suggest users to use the version in master, as it has new features and most recent bug fixes.
