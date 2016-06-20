@@ -8,7 +8,7 @@ https://github.com/TheFoundry-Modo/UnrealPlugin/tree/legacy_unreal_versions
 For installation and other information, please read documentation here:
 https://help.thefoundry.co.uk/modo/#help/pages/appendices/unreal_material_importer.html
 
-<br>Update 2016/5/17</br>
+<br>Feature and bug fix 2016/5/17</br>
 Fix random crash when applying materials  
 Add a new feature to support importing images with color space (SRGB or not)  
 Update log to match 4.11  
