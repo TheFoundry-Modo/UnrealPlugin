@@ -120,7 +120,7 @@ UTexture* TextureManager::LoadTexture(const FString& TextureFilename, const FStr
 		}
 		else 
 		{
-			UE_LOG(ModoMaterialImporter, Log, TEXT("Texture '%s' fails to create"), *texAsset->GetName());
+			UE_LOG(ModoMaterialImporter, Log, TEXT("Texture '%s' fails to create"), *TextureFilename);
 		}
 
 	}
