@@ -47,6 +47,8 @@ void ModoMaterialImporterModule::StartupModule()
 	LevelEditorModule.GetToolBarExtensibilityManager()->AddExtender(_ToolbarExtender);
 	
 	_ExtensionManager = LevelEditorModule.GetToolBarExtensibilityManager();
+
+	mLastPath = FString("\\");
 }
 
 void ModoMaterialImporterModule::ShutdownModule()
@@ -71,11 +73,10 @@ void ModoMaterialImporterModule::ButtonClicked()
 {
 	TArray< FString > OutFilenames;
 	const FString DialogTitle = FString("Load Modo Material");
-	const FString DefaultPath = FString("\\");
 	const FString DefaultFile = FString("");
 	const FString FileTypes = FString("Modo Material (XML)|*.XML;*.xml");
 
-	FDesktopPlatformModule::Get()->OpenFileDialog(NULL, DialogTitle, DefaultPath, DefaultFile, FileTypes, 0, OutFilenames);
+	FDesktopPlatformModule::Get()->OpenFileDialog(NULL, DialogTitle, mLastPath, DefaultFile, FileTypes, 0, OutFilenames);
 
 	if (OutFilenames.Num() != 0)
 	{
@@ -94,6 +95,9 @@ void ModoMaterialImporterModule::ButtonClicked()
 
 		FString path = OutFilenames[0].Left(ilastslash + 1);
 		UE_LOG(ModoMaterialImporter, Log, TEXT("Resource Path %s"), *path);
+
+		// Store the path the file was loaded from for the next time the file requester is opened.
+		mLastPath = path;
 
 		if (matXml->IsValid())
 		{

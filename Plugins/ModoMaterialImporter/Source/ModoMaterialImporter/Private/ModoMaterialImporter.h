@@ -42,6 +42,8 @@ private:
 
 	void AddToolbarExtension(FToolBarBuilder &);
 
+	FString  mLastPath;
+
 	TSharedPtr< const FExtensionBase > _ToolbarExtension;
 	TSharedPtr<FExtensibilityManager> _ExtensionManager;
 	TSharedPtr<FUICommandList> _PluginCommands;
