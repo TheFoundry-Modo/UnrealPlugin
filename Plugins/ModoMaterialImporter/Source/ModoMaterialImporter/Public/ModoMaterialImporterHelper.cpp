@@ -51,3 +51,28 @@ bool CommonHelper::GetValidePackageName(FString& PackageName)
 
 	return true;
 }
+
+// Strip invalid characters from the string, replacing spaces with underscores.
+
+bool CommonHelper::RemoveInvalidCharacters(FString& name)
+{
+	FString validName = "";
+	bool bChanged = false;
+
+	for (int i = 0; i < name.Len(); i++)
+	{
+		if (isalnum(name[i]) || name[i] == '_' || name[i] == '-') {
+			validName.AppendChar(name[i]);
+		}
+		else {
+			if (name[i] == ' ')
+				validName.AppendChar('_');
+			bChanged = true;
+		}
+	}
+
+	if (bChanged)
+		name = validName;
+
+	return bChanged;
+}
