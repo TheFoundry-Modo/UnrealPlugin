@@ -342,8 +342,10 @@ void MaterialCreator::LoadMaterial(FXmlFile *matXml, const FString &path, Assign
 	{
 
 		const TArray< FXmlNode * > matNodes = rootNode->GetChildrenNodes();
+
+		// The path of the XML file is used as the base path when "Relative Export Path" is checked in the exporter settings.
 		_path = FString (path);
-		bool usePathRedirect = false;
+		bool useRelativePath = false;
 		_imageInfo.Empty();
 
 		// Find image nodes firstly, we need image properties for images when creating materials
@@ -407,12 +409,16 @@ void MaterialCreator::LoadMaterial(FXmlFile *matXml, const FString &path, Assign
 				FString Content = matNode->GetContent();
 
 				if (!Content.IsEmpty())
-					usePathRedirect = Content.ToBool();
+					useRelativePath = Content.ToBool();
 			}
 			else if (tag.Equals(TEXT("RootPath"), ESearchCase::CaseSensitive))
 			{
-				if (usePathRedirect)
-					_path = matNode->GetContent();
+				// If we're not using relative paths then the full path stored in the texture filename is used.
+				// Otherwise the path of the XML file on disc is used rather than reading the path from the file
+				// which is in platform specific format.
+				// This allows materials exported on Mac to be read on PC and vice versa.
+				if (useRelativePath == false)
+					_path = "";
 			}
 			else if (tag.Equals(TEXT("Material"), ESearchCase::CaseSensitive))
 			{
