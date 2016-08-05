@@ -92,9 +92,7 @@ bool CommonHelper::RemoveMaterialSlotSuffix(FString& name)
 
 			if (SkinXXNumber.IsNumeric())
 			{
-				// remove the '_skinXX' suffix from the material name					
-				//AssetName = AssetName.LeftChop(AssetName.Len() - Offset);
-
+				// remove the '_skinXX' suffix from the material name
 				name = name.Left(Offset);
 
 				bChanged = true;
