@@ -59,9 +59,12 @@ UTexture* TextureManager::LoadTexture(const FString& TextureFilename, const FStr
 	else
 		Filename = TextureFilename;
 
-	const FString BaseName = FPaths::GetBaseFilename(TextureFilename);
-	const FString AssetName = FString::Printf(TEXT("Texture_%s"), *BaseName);
-	FString PackageName = TEXT("/Game/") + AssetName;
+	FString BaseName = FPaths::GetBaseFilename(TextureFilename);
+
+	// Remove invalid characters from the texture name.
+	CommonHelper::RemoveInvalidCharacters(BaseName);
+
+	FString PackageName = TEXT("/Game/") + BaseName;
 
 	UE_LOG(ModoMaterialImporter, Log, TEXT("Creating texture: %s"), *PackageName);
 
@@ -70,7 +73,7 @@ UTexture* TextureManager::LoadTexture(const FString& TextureFilename, const FStr
 		return NULL;
 
 	// Find if the texture exists anywhere in the content, in any package
-	UTexture* tex = FindObjectFast<UTexture>(NULL, *AssetName, false, true);
+	UTexture* tex = FindObjectFast<UTexture>(NULL, *BaseName, false, true);
 	if (tex) {
 		if (tex->SRGB != isSRGB)
 		{
@@ -103,7 +106,7 @@ UTexture* TextureManager::LoadTexture(const FString& TextureFilename, const FStr
 		bLoadedFile = true;
 		RawData.Add(0);
 		const uint8* Ptr = &RawData[0];
-		UObject* texAsset = texFactory->FactoryCreateBinary(UTexture::StaticClass(), AssetPackage, FName(*AssetName), Flags, NULL, *FPaths::GetExtension(TextureFilename), Ptr, Ptr + RawData.Num() - 1, GWarn);
+		UObject* texAsset = texFactory->FactoryCreateBinary(UTexture::StaticClass(), AssetPackage, FName(*BaseName), Flags, NULL, *FPaths::GetExtension(TextureFilename), Ptr, Ptr + RawData.Num() - 1, GWarn);
 
 		if (texAsset)
 		{
