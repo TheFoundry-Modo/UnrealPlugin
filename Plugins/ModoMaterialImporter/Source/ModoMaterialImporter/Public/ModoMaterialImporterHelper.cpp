@@ -76,3 +76,31 @@ bool CommonHelper::RemoveInvalidCharacters(FString& name)
 
 	return bChanged;
 }
+
+
+bool CommonHelper::RemoveMaterialSlotSuffix(FString& name)
+{
+	bool bChanged = false;
+
+	if (name.Len() > 6)
+	{
+		int32 Offset = name.Find(TEXT("_SKIN"), ESearchCase::IgnoreCase, ESearchDir::FromEnd);
+		if (Offset != INDEX_NONE)
+		{
+			// Chop off the material name so we are left with the number in _SKINXX
+			FString SkinXXNumber = name.Right(name.Len() - (Offset + 1)).RightChop(4);
+
+			if (SkinXXNumber.IsNumeric())
+			{
+				// remove the '_skinXX' suffix from the material name					
+				//AssetName = AssetName.LeftChop(AssetName.Len() - Offset);
+
+				name = name.Left(Offset);
+
+				bChanged = true;
+			}
+		}
+	}
+
+	return bChanged;
+}

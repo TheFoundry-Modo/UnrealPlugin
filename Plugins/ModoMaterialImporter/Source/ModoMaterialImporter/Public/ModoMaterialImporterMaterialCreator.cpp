@@ -314,6 +314,7 @@ UMaterial* CreateMaterial(FString materialName)
 	// Remove invalid characters from the material name.
 	FString AssetName = materialName;
 	CommonHelper::RemoveInvalidCharacters(AssetName);
+	CommonHelper::RemoveMaterialSlotSuffix(AssetName);
 
 	FString PackageName = TEXT("/Game/") + AssetName;
 
