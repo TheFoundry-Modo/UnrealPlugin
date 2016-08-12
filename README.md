@@ -12,6 +12,8 @@ https://help.thefoundry.co.uk/modo/#help/pages/appendices/unreal_material_import
 Fix cook failure when packaging projects on Windows.
 Fix name conversion, no more illegal characters.
 Fix relative path issue.
+Make the importer be able to load all supported texture formats.
+Remove name prefix from imported textures. 
 Other minor bug fixes.
 
 <br>Release Note 2016/5/17</br>
