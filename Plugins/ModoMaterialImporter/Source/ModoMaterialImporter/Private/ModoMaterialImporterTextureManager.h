@@ -30,7 +30,7 @@ namespace ModoMaterial
 	public:
 
 		static TextureManager* Instance();
-		UTexture* LoadTexture (const FString& TextureFilename, const FString* path, bool isSRGB);
+		UTexture* LoadTexture (const FString& TextureFilename, const FString* path, bool isSRGB, TextureCompressionSettings compSetting);
 
 	private:
 

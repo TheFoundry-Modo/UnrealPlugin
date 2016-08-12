@@ -44,7 +44,7 @@ TextureManager::~TextureManager()
 
 }
 
-UTexture* TextureManager::LoadTexture(const FString& TextureFilename, const FString* path = NULL, bool isSRGB = true)
+UTexture* TextureManager::LoadTexture(const FString& TextureFilename, const FString* path, bool isSRGB, TextureCompressionSettings compSetting)
 {
 	FString Filename;
 	bool isRelativePath = FPaths::IsRelative(TextureFilename);
@@ -75,11 +75,21 @@ UTexture* TextureManager::LoadTexture(const FString& TextureFilename, const FStr
 	// Find if the texture exists anywhere in the content, in any package
 	UTexture* tex = FindObjectFast<UTexture>(NULL, *BaseName, false, true);
 	if (tex) {
-		if (tex->SRGB != isSRGB)
-		{
+		// If the texture doesn't match current setting, we need update it
+		bool changed = false;
+		if (tex->SRGB != isSRGB) {
 			tex->SRGB = isSRGB;
-			tex->PostEditChange();
+			changed = true;
 		}
+
+		if (tex->CompressionSettings != compSetting) {
+			tex->CompressionSettings = compSetting;
+			changed = true;
+		}
+
+		if (changed)
+			tex->PostEditChange();
+
 		return tex;
 	}
 	
@@ -112,14 +122,13 @@ UTexture* TextureManager::LoadTexture(const FString& TextureFilename, const FStr
 		{
 			UTexture* texture = Cast<UTexture>(texAsset);
 			texture->SRGB = isSRGB;
+			texture->CompressionSettings = compSetting;
 
 			texAsset->MarkPackageDirty();
 			ULevel::LevelDirtiedEvent.Broadcast();
 			texAsset->PostEditChange();
 
-			
 			return Cast<UTexture>(texAsset);
-			
 		}
 		else 
 		{
