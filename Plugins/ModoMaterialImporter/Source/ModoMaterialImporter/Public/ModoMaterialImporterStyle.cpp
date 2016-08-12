@@ -21,24 +21,16 @@
 #include "IPluginManager.h"
 #include "EditorStyleSet.h"
 
-#include <string>
-
 #define IMAGE_BRUSH( RelativePath, ... ) FSlateImageBrush( ModoMaterialImporterStyle::InContent( RelativePath, ".png" ), __VA_ARGS__ )
 
 FString ModoMaterialImporterStyle::InContent(const FString& RelativePath, const ANSICHAR* Extension)
 {
 	static FString ContentDir = IPluginManager::Get().FindPlugin(TEXT("ModoMaterialImporter"))->GetContentDir();
 
-	FString outstr = (ContentDir / RelativePath) + Extension;
-
-	std::string MyStdString(TCHAR_TO_UTF8(*outstr));
-
-	printf("name is %s\n", MyStdString.c_str());
-
 	return ( ContentDir / RelativePath ) + Extension;
 }
 
-TSharedPtr< FSlateStyleSet > ModoMaterialImporterStyle::StyleSet = NULL;
+TSharedPtr< FSlateStyleSet > ModoMaterialImporterStyle::StyleSet;
 TSharedPtr< class ISlateStyle > ModoMaterialImporterStyle::Get() { return StyleSet; }
 
 void ModoMaterialImporterStyle::Initialize()

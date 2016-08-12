@@ -18,6 +18,6 @@
 
 #include "Engine.h"
 
-#define MODO_VER 1010
+#define MODO_VER 1020
 
 DECLARE_LOG_CATEGORY_EXTERN(ModoMaterialImporter, Log, All);
