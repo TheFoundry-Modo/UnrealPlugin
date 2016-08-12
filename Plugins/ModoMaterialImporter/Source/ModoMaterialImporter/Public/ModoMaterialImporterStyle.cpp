@@ -50,7 +50,7 @@ void ModoMaterialImporterStyle::Initialize()
 	{
 		const FTextBlockStyle NormalText = FEditorStyle::GetWidgetStyle<FTextBlockStyle>("NormalText");
 
-		StyleSet->Set( "Plugins.ButtonIcon", new IMAGE_BRUSH("modo", Icon40x40));
+		StyleSet->Set( "Plugins.ModoButtonIcon", new IMAGE_BRUSH("modo", Icon40x40));
 	}
 
 	FSlateStyleRegistry::RegisterSlateStyle( *StyleSet.Get() );

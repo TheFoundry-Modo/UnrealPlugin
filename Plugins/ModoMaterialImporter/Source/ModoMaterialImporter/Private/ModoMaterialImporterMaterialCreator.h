@@ -53,7 +53,7 @@ namespace ModoMaterial
 		static bool AddColorParam(FXmlNode *Node, UMaterial* mat, FMaterialInput<FColor>& matInput, int &graphOffset);
 		static void AddUnkownParam(FXmlNode *Node, UMaterial* mat, int &graphOffset);
 
-		static FString _path;
+		static FString _path, _rootPath;
 		static TArray< ImageInfo> _imageInfo;
 	};
 }

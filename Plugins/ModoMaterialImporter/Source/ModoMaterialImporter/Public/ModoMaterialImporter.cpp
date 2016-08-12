@@ -116,7 +116,7 @@ void ModoMaterialImporterModule::AddToolbarExtension(FToolBarBuilder &builder)
 
 	UE_LOG(ModoMaterialImporter, Log, TEXT("Starting Extension logic"));
 
-	FSlateIcon IconBrush = FSlateIcon(ModoMaterialImporterStyle::Get()->GetStyleSetName(), "Plugins.ButtonIcon");
+	FSlateIcon IconBrush = FSlateIcon(ModoMaterialImporterStyle::Get()->GetStyleSetName(), "Plugins.ModoButtonIcon");
 
 	builder.AddToolBarButton(ModoMaterialImporterCommands::Get().Button, NAME_None, LOCTEXT("Button_Override", "Modo Material"), LOCTEXT("Button_ToolTipOverride", "Load a modo XML material"), IconBrush, NAME_None);
 

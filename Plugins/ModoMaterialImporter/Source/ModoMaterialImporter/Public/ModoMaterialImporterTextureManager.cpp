@@ -44,21 +44,8 @@ TextureManager::~TextureManager()
 
 }
 
-UTexture* TextureManager::LoadTexture(const FString& TextureFilename, const FString* path, bool isSRGB, TextureCompressionSettings compSetting)
+UTexture* TextureManager::LoadTexture(const FString& TextureFilename, const FString& path, const FString& rootPath, bool isSRGB, TextureCompressionSettings compSetting)
 {
-	FString Filename;
-	bool isRelativePath = FPaths::IsRelative(TextureFilename);
-
-	if (isRelativePath)
-	{
-		if (path == NULL)
-			Filename = FPaths::GameContentDir() + TEXT("../Data/") + TextureFilename;
-		else
-			Filename = *path + TextureFilename;
-	}
-	else
-		Filename = TextureFilename;
-
 	FString BaseName = FPaths::GetBaseFilename(TextureFilename);
 
 	// Remove invalid characters from the texture name.
@@ -74,15 +61,18 @@ UTexture* TextureManager::LoadTexture(const FString& TextureFilename, const FStr
 
 	// Find if the texture exists anywhere in the content, in any package
 	UTexture* tex = FindObjectFast<UTexture>(NULL, *BaseName, false, true);
-	if (tex) {
+	if (tex)
+	{
 		// If the texture doesn't match current setting, we need update it
 		bool changed = false;
-		if (tex->SRGB != isSRGB) {
+		if (tex->SRGB != isSRGB)
+		{
 			tex->SRGB = isSRGB;
 			changed = true;
 		}
 
-		if (tex->CompressionSettings != compSetting) {
+		if (tex->CompressionSettings != compSetting)
+		{
 			tex->CompressionSettings = compSetting;
 			changed = true;
 		}
@@ -95,7 +85,26 @@ UTexture* TextureManager::LoadTexture(const FString& TextureFilename, const FStr
 	
 	// Texture not found, create a new one by binary loading it and packing
 	// it into a new asset package in the root content folder 
-	UPackage* AssetPackage = CreatePackage(NULL, *PackageName);
+	bool isRelativePath = FPaths::IsRelative(TextureFilename);
+	FString Filename;
+
+	if (isRelativePath)
+	{
+		if (path.IsEmpty())
+			Filename = FPaths::GameContentDir() + TEXT("../Data/") + TextureFilename;
+		else
+			Filename = path + TextureFilename;
+
+		const int32 FileSize = IFileManager::Get().FileSize(*Filename);
+
+		if (IFileManager::Get().FileSize(*Filename) == INDEX_NONE) 
+		{
+			UE_LOG(ModoMaterialImporter, Log, TEXT("File '%s' not found in relative path but marked as relative"), *Filename);
+			Filename = rootPath + TextureFilename;
+		}
+	}
+	else
+		Filename = TextureFilename;
 
 	const int32 FileSize = IFileManager::Get().FileSize(*Filename);
 	bool bValidFileSize = true;
@@ -110,6 +119,7 @@ UTexture* TextureManager::LoadTexture(const FString& TextureFilename, const FStr
 	TArray<uint8> RawData;
 	if (bValidFileSize && FFileHelper::LoadFileToArray(RawData, *Filename))
 	{
+		UPackage* AssetPackage = CreatePackage(NULL, *PackageName);
 		UTextureFactory* texFactory = NewObject<UTextureFactory>();
 		EObjectFlags Flags = RF_Public | RF_Standalone;
 

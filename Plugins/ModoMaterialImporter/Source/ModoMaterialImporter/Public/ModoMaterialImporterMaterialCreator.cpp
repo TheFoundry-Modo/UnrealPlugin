@@ -38,6 +38,7 @@ using namespace ModoMaterial;
 using std::vector;
 
 FString MaterialCreator::_path = FString();
+FString MaterialCreator::_rootPath = FString();
 TArray< MaterialCreator::ImageInfo> MaterialCreator::_imageInfo;
 
 bool isExt(const FString &str, const FString &ext)
@@ -57,7 +58,10 @@ bool isTextureFileName(const FString &content)
 			FString extension = content.Right(content.Len() - i - 1);
 			UE_LOG(ModoMaterialImporter, Log, TEXT("%s might be a filename"), *content);
 
-			if (isExt(extension, TEXT("dds")) || isExt(extension, TEXT("png")) || isExt(extension, TEXT("jpg")) || isExt(extension, TEXT("tga")) || isExt(extension, TEXT("bmp")) || isExt(extension, TEXT("exr")))
+			if (isExt(extension, TEXT("bmp")) || isExt(extension, TEXT("float")) 
+				|| isExt(extension, TEXT("pcx")) || isExt(extension, TEXT("png"))
+				|| isExt(extension, TEXT("psd")) || isExt(extension, TEXT("tga")) || isExt(extension, TEXT("jpg"))
+				|| isExt(extension, TEXT("exr")) || isExt(extension, TEXT("dds")) || isExt(extension, TEXT("hdr")))
 			{
 				return true;
 			}
@@ -423,6 +427,9 @@ void MaterialCreator::LoadMaterial(FXmlFile *matXml, const FString &path, Assign
 				// This allows materials exported on Mac to be read on PC and vice versa.
 				if (useRelativePath == false)
 					_path = "";
+
+				// Search into rootPath when we can not find textures, this is for backward compatibility only
+				_rootPath = matNode->GetContent();
 			}
 			else if (tag.Equals(TEXT("Material"), ESearchCase::CaseSensitive))
 			{
@@ -633,7 +640,7 @@ bool MaterialCreator::AddFloatParam(FXmlNode *Node, UMaterial* mat, FMaterialInp
 			if (!content.IsEmpty() && isTextureFileName(content))
 			{
 				ModoMaterial::TextureManager * texManager = ModoMaterial::TextureManager::Instance();
-				UTexture* tex = texManager->LoadTexture(*content, &_path, isSRGB, TC_Default);
+				UTexture* tex = texManager->LoadTexture(*content, _path, _rootPath, isSRGB, TC_Default);
 				if (tex)
 				{
 					FString wrapU = texNode->GetAttribute("wrapU");
@@ -710,7 +717,7 @@ bool MaterialCreator::AddVectorParam(FXmlNode *Node, UMaterial* mat, FMaterialIn
 				if (type == SAMPLERTYPE_Normal)
 					texCompSet = TC_Normalmap;
 
-				UTexture* tex = texManager->LoadTexture(*content, &_path, isSRGB, texCompSet);
+				UTexture* tex = texManager->LoadTexture(*content, _path, _rootPath, isSRGB, texCompSet);
 				if (tex)
 				{
 					FString wrapU = texNode->GetAttribute("wrapU");
@@ -779,7 +786,7 @@ bool MaterialCreator::AddColorParam(FXmlNode *Node, UMaterial* mat, FMaterialInp
 			if (!content.IsEmpty() && isTextureFileName(content))
 			{
 				ModoMaterial::TextureManager * texManager = ModoMaterial::TextureManager::Instance();
-				UTexture* tex = texManager->LoadTexture(*content, &_path, isSRGB, TC_Default);
+				UTexture* tex = texManager->LoadTexture(*content, _path, _rootPath, isSRGB, TC_Default);
 				if (tex)
 				{
 					FString wrapU = texNode->GetAttribute("wrapU");
@@ -857,7 +864,7 @@ void MaterialCreator::AddUnkownParam(FXmlNode *Node, UMaterial* mat, int &graphO
 			if (!content.IsEmpty() && isTextureFileName(content))
 			{
 				ModoMaterial::TextureManager * texManager = ModoMaterial::TextureManager::Instance();
-				UTexture* tex = texManager->LoadTexture(*content, &_path, isSRGB, TC_Default);
+				UTexture* tex = texManager->LoadTexture(*content, _path, _rootPath, isSRGB, TC_Default);
 				if (tex)
 				{
 					FString wrapU = texNode->GetAttribute("wrapU");
