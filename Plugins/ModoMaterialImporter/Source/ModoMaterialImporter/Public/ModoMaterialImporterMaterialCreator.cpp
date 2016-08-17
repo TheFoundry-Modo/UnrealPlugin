@@ -91,6 +91,7 @@ void getDigitalNumber(const FString &source, FString *left, FString *right)
 	}
 
 }
+
 FVector4 processDigitalNumbers(const FString &content)
 {
 	FString symbol = TEXT(",");
@@ -581,13 +582,6 @@ void MaterialCreator::LoadMaterial(FXmlFile *matXml, const FString &path, Assign
 	}
 }
 
-struct TextureInfo
-{
-	const FXmlNode* node;
-	FString filename;
-	bool isSRGB; 
-};
-
 void MaterialCreator::FindTextureNodes(const FXmlNode *Node, TArray<TextureInfo>& txtrInfos)
 {
 	FString content = Node->GetAttribute("texture");
@@ -845,7 +839,6 @@ bool MaterialCreator::AddColorParam(FXmlNode *Node, UMaterial* mat, FMaterialInp
 
 	return false;
 }
-
 
 void MaterialCreator::AddUnkownParam(FXmlNode *Node, UMaterial* mat, int &graphOffset)
 {
