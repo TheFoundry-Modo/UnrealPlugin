@@ -317,11 +317,7 @@ UMaterial* CreateMaterial(FString materialName)
 {
 	UMaterialFactoryNew* matFactory = NewObject<UMaterialFactoryNew>();
 
-	// Remove invalid characters from the material name.
-	FString AssetName = materialName;
-	CommonHelper::RemoveInvalidCharacters(AssetName);
-
-	FString PackageName = TEXT("/Game/") + AssetName;
+	FString PackageName = TEXT("/Game/") + materialName;
 
 	UE_LOG(ModoMaterialImporter, Log, TEXT("Creating package: %s"), *PackageName);
 
@@ -332,7 +328,7 @@ UMaterial* CreateMaterial(FString materialName)
 	UPackage* AssetPackage = CreatePackage(NULL, *PackageName);
 	EObjectFlags Flags = RF_Public | RF_Standalone;
 
-	UObject* CreatedAsset = matFactory->FactoryCreateNew(UMaterial::StaticClass(), AssetPackage, FName(*AssetName), Flags, NULL, GWarn);
+	UObject* CreatedAsset = matFactory->FactoryCreateNew(UMaterial::StaticClass(), AssetPackage, FName(*materialName), Flags, NULL, GWarn);
 
 	if (CreatedAsset)
 	{
@@ -506,9 +502,16 @@ void MaterialCreator::LoadMaterial(FXmlFile *matXml, const FString &path, Assign
 					}
 				}
 
-				FString materialName = matID;
+				// Use the ptag for the material name.
+				FString materialName;
 				if (!ptag.IsEmpty())
-					materialName = materialName + FString("_") + ptag;
+					materialName = ptag;
+				else
+					return;
+
+				// Remove invalid characters and any '_skinXX' suffix from the material name.
+				CommonHelper::RemoveInvalidCharacters(materialName);
+				CommonHelper::RemoveMaterialSlotSuffix(materialName);
 
 				UMaterial* mat = CreateMaterial(materialName);
 
@@ -521,7 +524,7 @@ void MaterialCreator::LoadMaterial(FXmlFile *matXml, const FString &path, Assign
 				}
 				else
 				{
-					matAssign->AddMaterial(mat, ptag);
+					matAssign->AddMaterial(mat, materialName);
 				}
 
 				IAssetEditorInstance* OpenEditor = FAssetEditorManager::Get().FindEditorForAsset(mat, true);
