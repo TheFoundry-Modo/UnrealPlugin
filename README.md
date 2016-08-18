@@ -8,7 +8,15 @@ https://github.com/TheFoundry-Modo/UnrealPlugin/tree/legacy_unreal_versions
 For installation and other information, please read documentation here:
 https://help.thefoundry.co.uk/modo/#help/pages/appendices/unreal_material_importer.html
 
-<br>[Feature & Bug Fix] 2016/5/17</br>
+<br>Release Note 2016/8/12</br>
+Fix cook failure when packaging projects on Windows.
+Fix name conversion, no more illegal characters.
+Fix relative path issue.
+Make the importer be able to load all supported texture formats.
+Remove name prefix from imported textures. 
+Other minor bug fixes.
+
+<br>Release Note 2016/5/17</br>
 Fix random crash when applying materials  
 Add a new feature to support importing images with color space (SRGB or not)  
 Update log to match 4.11  

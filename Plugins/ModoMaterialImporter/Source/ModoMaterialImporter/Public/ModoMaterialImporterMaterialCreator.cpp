@@ -38,6 +38,7 @@ using namespace ModoMaterial;
 using std::vector;
 
 FString MaterialCreator::_path = FString();
+FString MaterialCreator::_rootPath = FString();
 TArray< MaterialCreator::ImageInfo> MaterialCreator::_imageInfo;
 
 bool isExt(const FString &str, const FString &ext)
@@ -57,7 +58,10 @@ bool isTextureFileName(const FString &content)
 			FString extension = content.Right(content.Len() - i - 1);
 			UE_LOG(ModoMaterialImporter, Log, TEXT("%s might be a filename"), *content);
 
-			if (isExt(extension, TEXT("dds")) || isExt(extension, TEXT("png")) || isExt(extension, TEXT("jpg")) || isExt(extension, TEXT("tga")) || isExt(extension, TEXT("bmp")) || isExt(extension, TEXT("exr")))
+			if (isExt(extension, TEXT("bmp")) || isExt(extension, TEXT("float")) 
+				|| isExt(extension, TEXT("pcx")) || isExt(extension, TEXT("png"))
+				|| isExt(extension, TEXT("psd")) || isExt(extension, TEXT("tga")) || isExt(extension, TEXT("jpg"))
+				|| isExt(extension, TEXT("exr")) || isExt(extension, TEXT("dds")) || isExt(extension, TEXT("hdr")))
 			{
 				return true;
 			}
@@ -87,6 +91,7 @@ void getDigitalNumber(const FString &source, FString *left, FString *right)
 	}
 
 }
+
 FVector4 processDigitalNumbers(const FString &content)
 {
 	FString symbol = TEXT(",");
@@ -139,7 +144,7 @@ int channelOutputIndex(const FString& swizzling)
 }
 
 template <typename T>
-void LinkConstent(UMaterial* mat, const vector<float>& value, FMaterialInput<T>* matInput, int& position)
+void LinkConstant(UMaterial* mat, const vector<float>& value, FMaterialInput<T>* matInput, int& position)
 {
 	if (mat != nullptr)
 	{
@@ -202,14 +207,15 @@ void LinkConstent(UMaterial* mat, const vector<float>& value, FMaterialInput<T>*
 }
 
 template <typename T>
-void LinkTexture(	UMaterial* mat, 
-					UTexture* tex, 
-					FMaterialInput<T>* matInput, 
-					int& position, 
-					float tiling[2], 
-					int uvIndex,
-					int outIndex, 
-					EMaterialSamplerType samplerType = EMaterialSamplerType::SAMPLERTYPE_Color)
+void LinkTexture(
+	UMaterial* mat, 
+	UTexture* tex, 
+	FMaterialInput<T>* matInput, 
+	int& position, 
+	float tiling[2], 
+	int uvIndex,
+	int outIndex, 
+	EMaterialSamplerType samplerType = EMaterialSamplerType::SAMPLERTYPE_Color)
 {
 	if (mat != nullptr && tex != nullptr)
 	{
@@ -418,6 +424,9 @@ void MaterialCreator::LoadMaterial(FXmlFile *matXml, const FString &path, Assign
 				// This allows materials exported on Mac to be read on PC and vice versa.
 				if (useRelativePath == false)
 					_path = "";
+
+				// Search into rootPath when we can not find textures, this is for backward compatibility only
+				_rootPath = matNode->GetContent();
 			}
 			else if (tag.Equals(TEXT("Material"), ESearchCase::CaseSensitive))
 			{
@@ -576,13 +585,6 @@ void MaterialCreator::LoadMaterial(FXmlFile *matXml, const FString &path, Assign
 	}
 }
 
-struct TextureInfo
-{
-	const FXmlNode* node;
-	FString filename;
-	bool isSRGB; 
-};
-
 void MaterialCreator::FindTextureNodes(const FXmlNode *Node, TArray<TextureInfo>& txtrInfos)
 {
 	FString content = Node->GetAttribute("texture");
@@ -635,7 +637,7 @@ bool MaterialCreator::AddFloatParam(FXmlNode *Node, UMaterial* mat, FMaterialInp
 			if (!content.IsEmpty() && isTextureFileName(content))
 			{
 				ModoMaterial::TextureManager * texManager = ModoMaterial::TextureManager::Instance();
-				UTexture* tex = texManager->LoadTexture(*content, &_path, isSRGB);
+				UTexture* tex = texManager->LoadTexture(*content, _path, _rootPath, isSRGB, TC_Default);
 				if (tex)
 				{
 					FString wrapU = texNode->GetAttribute("wrapU");
@@ -681,7 +683,7 @@ bool MaterialCreator::AddFloatParam(FXmlNode *Node, UMaterial* mat, FMaterialInp
 
 			vector<float> color = { vec[0] };
 
-			LinkConstent<float>(mat, color, &matInput, graphOffset);
+			LinkConstant<float>(mat, color, &matInput, graphOffset);
 		}
 
 		return true;
@@ -706,8 +708,13 @@ bool MaterialCreator::AddVectorParam(FXmlNode *Node, UMaterial* mat, FMaterialIn
 
 			if (!content.IsEmpty() && isTextureFileName(content))
 			{
-				ModoMaterial::TextureManager * texManager = ModoMaterial::TextureManager::Instance();
-				UTexture* tex = texManager->LoadTexture(*content, &_path, isSRGB);
+				ModoMaterial::TextureManager	*texManager = ModoMaterial::TextureManager::Instance();
+				TextureCompressionSettings	 texCompSet = TC_Default;
+
+				if (type == SAMPLERTYPE_Normal)
+					texCompSet = TC_Normalmap;
+
+				UTexture* tex = texManager->LoadTexture(*content, _path, _rootPath, isSRGB, texCompSet);
 				if (tex)
 				{
 					FString wrapU = texNode->GetAttribute("wrapU");
@@ -750,7 +757,7 @@ bool MaterialCreator::AddVectorParam(FXmlNode *Node, UMaterial* mat, FMaterialIn
 
 			vector<float> color = { vec[0], vec[1], vec[2] };
 
-			LinkConstent<FVector>(mat, color, &matInput, graphOffset);
+			LinkConstant<FVector>(mat, color, &matInput, graphOffset);
 		}
 
 		return true;
@@ -776,7 +783,7 @@ bool MaterialCreator::AddColorParam(FXmlNode *Node, UMaterial* mat, FMaterialInp
 			if (!content.IsEmpty() && isTextureFileName(content))
 			{
 				ModoMaterial::TextureManager * texManager = ModoMaterial::TextureManager::Instance();
-				UTexture* tex = texManager->LoadTexture(*content, &_path, isSRGB);
+				UTexture* tex = texManager->LoadTexture(*content, _path, _rootPath, isSRGB, TC_Default);
 				if (tex)
 				{
 					FString wrapU = texNode->GetAttribute("wrapU");
@@ -827,7 +834,7 @@ bool MaterialCreator::AddColorParam(FXmlNode *Node, UMaterial* mat, FMaterialInp
 
 			vector<float> color = { vec[0], vec[1], vec[2], vec[3] };
 
-			LinkConstent<FColor>(mat, color, &matInput, graphOffset);
+			LinkConstant<FColor>(mat, color, &matInput, graphOffset);
 		}
 
 		return true;
@@ -835,7 +842,6 @@ bool MaterialCreator::AddColorParam(FXmlNode *Node, UMaterial* mat, FMaterialInp
 
 	return false;
 }
-
 
 void MaterialCreator::AddUnkownParam(FXmlNode *Node, UMaterial* mat, int &graphOffset)
 {
@@ -854,7 +860,7 @@ void MaterialCreator::AddUnkownParam(FXmlNode *Node, UMaterial* mat, int &graphO
 			if (!content.IsEmpty() && isTextureFileName(content))
 			{
 				ModoMaterial::TextureManager * texManager = ModoMaterial::TextureManager::Instance();
-				UTexture* tex = texManager->LoadTexture(*content, &_path, isSRGB);
+				UTexture* tex = texManager->LoadTexture(*content, _path, _rootPath, isSRGB, TC_Default);
 				if (tex)
 				{
 					FString wrapU = texNode->GetAttribute("wrapU");

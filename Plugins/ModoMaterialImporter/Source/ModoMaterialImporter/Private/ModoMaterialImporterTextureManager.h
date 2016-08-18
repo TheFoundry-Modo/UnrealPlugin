@@ -21,12 +21,6 @@
 #include "SlateBasics.h"
 #include "SlateExtras.h"
 
-#include <map>
-#include <string>
-
-using std::map;
-using std::string;
-
 namespace ModoMaterial
 {
 	enum class ColorSpace {sRGB, Linear};
@@ -36,7 +30,7 @@ namespace ModoMaterial
 	public:
 
 		static TextureManager* Instance();
-		UTexture* LoadTexture (const FString& TextureFilename, const FString* path, bool isSRGB);
+		UTexture* LoadTexture (const FString& TextureFilename, const FString& path, const FString& rootPath, bool isSRGB, TextureCompressionSettings compSetting);
 
 	private:
 
