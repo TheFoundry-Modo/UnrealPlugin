@@ -40,7 +40,7 @@ using std::vector;
 FString MaterialCreator::_path = FString();
 FString MaterialCreator::_rootPath = FString();
 TArray< MaterialCreator::ImageInfo> MaterialCreator::_imageInfo;
-bool MaterialCreator::_ptagMaterialName = false;
+bool MaterialCreator::_usePtagMaterialName = false;
 
 bool isExt(const FString &str, const FString &ext)
 {
@@ -353,7 +353,7 @@ void MaterialCreator::LoadMaterial(FXmlFile *matXml, const FString &path, Assign
 		_path = FString (path);
 		bool useRelativePath = false;
 		_imageInfo.Empty();
-		_ptagMaterialName = false;
+		_usePtagMaterialName = false;
 
 		// Find image nodes firstly, we need image properties for images when creating materials
 		for (int j = 0; j < matNodes.Num(); j++)
@@ -412,7 +412,7 @@ void MaterialCreator::LoadMaterial(FXmlFile *matXml, const FString &path, Assign
 				FString Content = matNode->GetContent();
 
 				if (!Content.IsEmpty())
-					_ptagMaterialName = Content.ToBool();
+					_usePtagMaterialName = Content.ToBool();
 			}
 			else if (tag.Equals(TEXT("ImageFiles"), ESearchCase::CaseSensitive))
 			{
@@ -513,7 +513,7 @@ void MaterialCreator::LoadMaterial(FXmlFile *matXml, const FString &path, Assign
 
 				FString materialName;
 
-				if (_ptagMaterialName)
+				if (_usePtagMaterialName)
 				{
 					// Use the ptag for the material name.
 					if (!ptag.IsEmpty())
