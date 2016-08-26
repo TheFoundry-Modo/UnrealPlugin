@@ -40,6 +40,7 @@ using std::vector;
 FString MaterialCreator::_path = FString();
 FString MaterialCreator::_rootPath = FString();
 TArray< MaterialCreator::ImageInfo> MaterialCreator::_imageInfo;
+bool MaterialCreator::_ptagMaterialName = false;
 
 bool isExt(const FString &str, const FString &ext)
 {
@@ -313,10 +314,10 @@ void LinkTexture(
 	}
 }
 
+// Remove all invalid characters in materialName before passing in
 UMaterial* CreateMaterial(FString materialName)
 {
 	UMaterialFactoryNew* matFactory = NewObject<UMaterialFactoryNew>();
-
 	FString PackageName = TEXT("/Game/") + materialName;
 
 	UE_LOG(ModoMaterialImporter, Log, TEXT("Creating package: %s"), *PackageName);
@@ -352,6 +353,7 @@ void MaterialCreator::LoadMaterial(FXmlFile *matXml, const FString &path, Assign
 		_path = FString (path);
 		bool useRelativePath = false;
 		_imageInfo.Empty();
+		_ptagMaterialName = false;
 
 		// Find image nodes firstly, we need image properties for images when creating materials
 		for (int j = 0; j < matNodes.Num(); j++)
@@ -404,6 +406,13 @@ void MaterialCreator::LoadMaterial(FXmlFile *matXml, const FString &path, Assign
 					if (versionNum > MODO_VER)
 						UE_LOG(ModoMaterialImporter, Log, TEXT("WARNING: The importer is out of date (The XML file is exported from a higher version of MODO)."));
 				}
+			}
+			else if (tag.Equals(TEXT("PtagAsID"), ESearchCase::CaseSensitive))
+			{
+				FString Content = matNode->GetContent();
+
+				if (!Content.IsEmpty())
+					_ptagMaterialName = Content.ToBool();
 			}
 			else if (tag.Equals(TEXT("ImageFiles"), ESearchCase::CaseSensitive))
 			{
@@ -502,16 +511,29 @@ void MaterialCreator::LoadMaterial(FXmlFile *matXml, const FString &path, Assign
 					}
 				}
 
-				// Use the ptag for the material name.
 				FString materialName;
-				if (!ptag.IsEmpty())
-					materialName = ptag;
-				else
-					return;
 
-				// Remove invalid characters and any '_skinXX' suffix from the material name.
-				CommonHelper::RemoveInvalidCharacters(materialName);
-				CommonHelper::RemoveMaterialSlotSuffix(materialName);
+				if (_ptagMaterialName)
+				{
+					// Use the ptag for the material name.
+					if (!ptag.IsEmpty())
+						materialName = ptag;
+					else
+						return;
+
+					// Remove invalid characters and any '_skinXX' suffix from the material name.
+					CommonHelper::RemoveInvalidCharacters(materialName);
+					CommonHelper::RemoveMaterialSlotSuffix(materialName);
+				}
+				else
+				{
+					// Use nested material ID for the material name.
+					materialName = matID;
+					materialName = materialName + FString("_") + ptag;
+
+					// Remove invalid characters
+					CommonHelper::RemoveInvalidCharacters(materialName);
+				}
 
 				UMaterial* mat = CreateMaterial(materialName);
 
@@ -524,7 +546,8 @@ void MaterialCreator::LoadMaterial(FXmlFile *matXml, const FString &path, Assign
 				}
 				else
 				{
-					matAssign->AddMaterial(mat, materialName);
+					// use ptag for material matching, make sure ptag here is the same as the ptag in FBX file.
+					matAssign->AddMaterial(mat, ptag);
 				}
 
 				IAssetEditorInstance* OpenEditor = FAssetEditorManager::Get().FindEditorForAsset(mat, true);
