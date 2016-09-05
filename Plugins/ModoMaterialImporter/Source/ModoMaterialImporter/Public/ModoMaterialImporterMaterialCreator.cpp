@@ -40,7 +40,6 @@ using std::vector;
 FString MaterialCreator::_path = FString();
 FString MaterialCreator::_rootPath = FString();
 TArray< MaterialCreator::ImageInfo> MaterialCreator::_imageInfo;
-bool MaterialCreator::_usePtagMaterialName = false;
 
 bool isExt(const FString &str, const FString &ext)
 {
@@ -92,7 +91,6 @@ void getDigitalNumber(const FString &source, FString *left, FString *right)
 	}
 
 }
-
 FVector4 processDigitalNumbers(const FString &content)
 {
 	FString symbol = TEXT(",");
@@ -145,7 +143,7 @@ int channelOutputIndex(const FString& swizzling)
 }
 
 template <typename T>
-void LinkConstant(UMaterial* mat, const vector<float>& value, FMaterialInput<T>* matInput, int& position)
+void LinkConstent(UMaterial* mat, const vector<float>& value, FMaterialInput<T>* matInput, int& position)
 {
 	if (mat != nullptr)
 	{
@@ -314,11 +312,15 @@ void LinkTexture(
 	}
 }
 
-// Remove all invalid characters in materialName before passing in
 UMaterial* CreateMaterial(FString materialName)
 {
 	UMaterialFactoryNew* matFactory = NewObject<UMaterialFactoryNew>();
-	FString PackageName = TEXT("/Game/") + materialName;
+
+	// Remove invalid characters from the material name.
+	FString AssetName = materialName;
+	CommonHelper::RemoveInvalidCharacters(AssetName);
+
+	FString PackageName = TEXT("/Game/") + AssetName;
 
 	UE_LOG(ModoMaterialImporter, Log, TEXT("Creating package: %s"), *PackageName);
 
@@ -329,7 +331,7 @@ UMaterial* CreateMaterial(FString materialName)
 	UPackage* AssetPackage = CreatePackage(NULL, *PackageName);
 	EObjectFlags Flags = RF_Public | RF_Standalone;
 
-	UObject* CreatedAsset = matFactory->FactoryCreateNew(UMaterial::StaticClass(), AssetPackage, FName(*materialName), Flags, NULL, GWarn);
+	UObject* CreatedAsset = matFactory->FactoryCreateNew(UMaterial::StaticClass(), AssetPackage, FName(*AssetName), Flags, NULL, GWarn);
 
 	if (CreatedAsset)
 	{
@@ -353,7 +355,6 @@ void MaterialCreator::LoadMaterial(FXmlFile *matXml, const FString &path, Assign
 		_path = FString (path);
 		bool useRelativePath = false;
 		_imageInfo.Empty();
-		_usePtagMaterialName = false;
 
 		// Find image nodes firstly, we need image properties for images when creating materials
 		for (int j = 0; j < matNodes.Num(); j++)
@@ -406,13 +407,6 @@ void MaterialCreator::LoadMaterial(FXmlFile *matXml, const FString &path, Assign
 					if (versionNum > MODO_VER)
 						UE_LOG(ModoMaterialImporter, Log, TEXT("WARNING: The importer is out of date (The XML file is exported from a higher version of MODO)."));
 				}
-			}
-			else if (tag.Equals(TEXT("PtagAsID"), ESearchCase::CaseSensitive))
-			{
-				FString Content = matNode->GetContent();
-
-				if (!Content.IsEmpty())
-					_usePtagMaterialName = Content.ToBool();
 			}
 			else if (tag.Equals(TEXT("ImageFiles"), ESearchCase::CaseSensitive))
 			{
@@ -511,29 +505,9 @@ void MaterialCreator::LoadMaterial(FXmlFile *matXml, const FString &path, Assign
 					}
 				}
 
-				FString materialName;
-
-				if (_usePtagMaterialName)
-				{
-					// Use the ptag for the material name.
-					if (!ptag.IsEmpty())
-						materialName = ptag;
-					else
-						return;
-
-					// Remove invalid characters and any '_skinXX' suffix from the material name.
-					CommonHelper::RemoveInvalidCharacters(materialName);
-					CommonHelper::RemoveMaterialSlotSuffix(materialName);
-				}
-				else
-				{
-					// Use nested material ID for the material name.
-					materialName = matID;
+				FString materialName = matID;
+				if (!ptag.IsEmpty())
 					materialName = materialName + FString("_") + ptag;
-
-					// Remove invalid characters
-					CommonHelper::RemoveInvalidCharacters(materialName);
-				}
 
 				UMaterial* mat = CreateMaterial(materialName);
 
@@ -546,7 +520,6 @@ void MaterialCreator::LoadMaterial(FXmlFile *matXml, const FString &path, Assign
 				}
 				else
 				{
-					// use ptag for material matching, make sure ptag here is the same as the ptag in FBX file.
 					matAssign->AddMaterial(mat, ptag);
 				}
 
@@ -607,6 +580,13 @@ void MaterialCreator::LoadMaterial(FXmlFile *matXml, const FString &path, Assign
 		}
 	}
 }
+
+struct TextureInfo
+{
+	const FXmlNode* node;
+	FString filename;
+	bool isSRGB; 
+};
 
 void MaterialCreator::FindTextureNodes(const FXmlNode *Node, TArray<TextureInfo>& txtrInfos)
 {
@@ -706,7 +686,7 @@ bool MaterialCreator::AddFloatParam(FXmlNode *Node, UMaterial* mat, FMaterialInp
 
 			vector<float> color = { vec[0] };
 
-			LinkConstant<float>(mat, color, &matInput, graphOffset);
+			LinkConstent<float>(mat, color, &matInput, graphOffset);
 		}
 
 		return true;
@@ -780,7 +760,7 @@ bool MaterialCreator::AddVectorParam(FXmlNode *Node, UMaterial* mat, FMaterialIn
 
 			vector<float> color = { vec[0], vec[1], vec[2] };
 
-			LinkConstant<FVector>(mat, color, &matInput, graphOffset);
+			LinkConstent<FVector>(mat, color, &matInput, graphOffset);
 		}
 
 		return true;
@@ -857,7 +837,7 @@ bool MaterialCreator::AddColorParam(FXmlNode *Node, UMaterial* mat, FMaterialInp
 
 			vector<float> color = { vec[0], vec[1], vec[2], vec[3] };
 
-			LinkConstant<FColor>(mat, color, &matInput, graphOffset);
+			LinkConstent<FColor>(mat, color, &matInput, graphOffset);
 		}
 
 		return true;
@@ -865,6 +845,7 @@ bool MaterialCreator::AddColorParam(FXmlNode *Node, UMaterial* mat, FMaterialInp
 
 	return false;
 }
+
 
 void MaterialCreator::AddUnkownParam(FXmlNode *Node, UMaterial* mat, int &graphOffset)
 {
