@@ -351,7 +351,6 @@ void MaterialCreator::LoadMaterial(FXmlFile *matXml, const FString &path, Assign
 
 		// The path of the XML file is used as the base path when "Relative Export Path" is checked in the exporter settings.
 		_path = FString (path);
-		bool useRelativePath = false;
 		_imageInfo.Empty();
 		_usePtagMaterialName = false;
 
@@ -420,19 +419,15 @@ void MaterialCreator::LoadMaterial(FXmlFile *matXml, const FString &path, Assign
 			}
 			else if (tag.Equals(TEXT("useRootPath"), ESearchCase::CaseSensitive))
 			{
-				FString Content = matNode->GetContent();
-
-				if (!Content.IsEmpty())
-					useRelativePath = Content.ToBool();
+				// useRootPath is redundant
 			}
 			else if (tag.Equals(TEXT("RootPath"), ESearchCase::CaseSensitive))
 			{
-				// If we're not using relative paths then the full path stored in the texture filename is used.
-				// Otherwise the path of the XML file on disc is used rather than reading the path from the file
-				// which is in platform specific format.
-				// This allows materials exported on Mac to be read on PC and vice versa.
-				if (useRelativePath == false)
-					_path = "";
+				// useRelativePath is also redundant,
+				// If we export XML with relative texture file paths, then their filenames are relative, otherwise absolute, 
+				// so testing filenames are enough to know if they are relative.
+				// For compatibility, we will still use "RootPath" as a backup solution.
+				// See TextureManager::LoadTexture for more details.
 
 				// Search into rootPath when we can not find textures, this is for backward compatibility only
 				_rootPath = matNode->GetContent();

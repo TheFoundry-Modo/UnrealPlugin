@@ -1,7 +1,7 @@
 {
     "FileVersion" : 3,
-    "Version" : 1,
-    "VersionName" : "4.12.0",
+    "Version" : 3,
+    "VersionName" : "4.13.0",
     "FriendlyName" : "Modo Material Importer Plugin",
     "Description" : "This Plugin converts XML of modo materials to Unreal4 material and texture assets, and is able to apply the imported materials to FBX 3D meshes exported from modo",
     "Category" : "Editor",

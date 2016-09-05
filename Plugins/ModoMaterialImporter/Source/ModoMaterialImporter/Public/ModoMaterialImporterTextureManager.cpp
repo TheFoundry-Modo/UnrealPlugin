@@ -84,7 +84,10 @@ UTexture* TextureManager::LoadTexture(const FString& TextureFilename, const FStr
 	}
 	
 	// Texture not found, create a new one by binary loading it and packing
-	// it into a new asset package in the root content folder 
+	// Try method 1, 2, 3. Early return if texture file not found
+	
+	// Method 1, look into the texture filename.
+	int32 FileSize = 0;
 	bool isRelativePath = FPaths::IsRelative(TextureFilename);
 	FString Filename;
 
@@ -94,30 +97,45 @@ UTexture* TextureManager::LoadTexture(const FString& TextureFilename, const FStr
 			Filename = FPaths::GameContentDir() + TEXT("../Data/") + TextureFilename;
 		else
 			Filename = path + TextureFilename;
-
-		const int32 FileSize = IFileManager::Get().FileSize(*Filename);
-
-		if (IFileManager::Get().FileSize(*Filename) == INDEX_NONE) 
-		{
-			UE_LOG(ModoMaterialImporter, Log, TEXT("File '%s' not found in relative path but marked as relative"), *Filename);
-			Filename = rootPath + TextureFilename;
-		}
 	}
 	else
 		Filename = TextureFilename;
 
-	const int32 FileSize = IFileManager::Get().FileSize(*Filename);
-	bool bValidFileSize = true;
-	bool bLoadedFile = false;
-
-	if (FileSize == INDEX_NONE)
+	FileSize = IFileManager::Get().FileSize(*Filename);
+	// If Method 1 failed, use Method 2 or 3
+	if (FileSize == INDEX_NONE) 
 	{
-		UE_LOG(ModoMaterialImporter, Log, TEXT("File '%s' does not exist"), *Filename);
-		bValidFileSize = false;
+		UE_LOG(ModoMaterialImporter, Log, TEXT("Texture '%s' is not found with filename composition"), *Filename);
+		
+		// Try to compose relative filename only (compatibility)
+		if (isRelativePath)
+		{
+			// Method 2, use rootPath
+			Filename = rootPath + TextureFilename;
+			FileSize = IFileManager::Get().FileSize(*Filename);
+			// If Method 2 failed, use Method 3
+			if (FileSize == INDEX_NONE)
+			{
+				// Method 3, build-in path
+				Filename = FPaths::GameContentDir() + TEXT("../Data/") + TextureFilename;
+				FileSize = IFileManager::Get().FileSize(*Filename);
+
+				if (FileSize == INDEX_NONE) {
+					UE_LOG(ModoMaterialImporter, Log, TEXT("Texture '%s' is not found with compatibility mode"), *Filename);
+					return NULL;
+				}
+			}
+		}
+		else
+		{
+			return NULL;
+		}
 	}
 
+	bool bLoadedFile = false;
+
 	TArray<uint8> RawData;
-	if (bValidFileSize && FFileHelper::LoadFileToArray(RawData, *Filename))
+	if (FFileHelper::LoadFileToArray(RawData, *Filename))
 	{
 		UPackage* AssetPackage = CreatePackage(NULL, *PackageName);
 		UTextureFactory* texFactory = NewObject<UTextureFactory>();
@@ -138,6 +156,7 @@ UTexture* TextureManager::LoadTexture(const FString& TextureFilename, const FStr
 			ULevel::LevelDirtiedEvent.Broadcast();
 			texAsset->PostEditChange();
 
+			UE_LOG(ModoMaterialImporter, Log, TEXT("Texture '%s' is loaded"), *Filename);
 			return Cast<UTexture>(texAsset);
 		}
 		else 
@@ -147,6 +166,6 @@ UTexture* TextureManager::LoadTexture(const FString& TextureFilename, const FStr
 
 	}
 
-	UE_LOG(ModoMaterialImporter, Log, TEXT("File '%s' is not a valid image"), *Filename);
+	UE_LOG(ModoMaterialImporter, Log, TEXT("Texture '%s' is not valid"), *Filename);
 	return NULL;
 }
