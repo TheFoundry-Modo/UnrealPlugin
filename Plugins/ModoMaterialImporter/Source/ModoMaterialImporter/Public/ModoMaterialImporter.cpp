@@ -112,7 +112,7 @@ void ModoMaterialImporterModule::ButtonClicked()
 
 void ModoMaterialImporterModule::AddToolbarExtension(FToolBarBuilder &builder)
 {
-#define LOCTEXT_NAMESPACE "ModoMaterialImporter"
+#define LOCTEXT_NAMESPACE "LevelEditorToolBar"
 
 	UE_LOG(ModoMaterialImporter, Log, TEXT("Starting Extension logic"));
 

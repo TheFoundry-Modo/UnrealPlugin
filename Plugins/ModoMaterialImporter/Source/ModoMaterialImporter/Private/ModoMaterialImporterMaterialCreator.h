@@ -55,5 +55,6 @@ namespace ModoMaterial
 
 		static FString _path, _rootPath;
 		static TArray< ImageInfo> _imageInfo;
+		static bool _usePtagMaterialName;
 	};
 }
