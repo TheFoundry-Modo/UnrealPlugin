@@ -10,7 +10,7 @@
  
  <br>Release Note 2016/9/05</br>
  Fix packaging issue in blueprint projects.<br />
- Accumplish the cfg file of the plugin.<br />
+ Accomplish the cfg file of the plugin.<br />
  Use better solutions for relative path.<br />
  
  <br>Release Note 2016/8/12</br>
