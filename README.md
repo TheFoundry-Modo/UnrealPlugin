@@ -8,10 +8,13 @@
  For installation and other information, please read documentation here:<br />
  https://help.thefoundry.co.uk/modo/#help/pages/appendices/unreal_material_importer.html<br />
  
+ Intended Platform (tested only): Desktop, Laptop, Windows, Mac OSX
+ 
  <br>Release Note 2016/9/05</br>
  Fix packaging issue in blueprint projects.<br />
  Accomplish the cfg file of the plugin.<br />
  Use better solutions for relative path.<br />
+ Set WhiteList as "Win64" "Win32" "Mac".<br />
  
  <br>Release Note 2016/8/12</br>
  Fix cook failure when packaging projects on Windows.<br />
