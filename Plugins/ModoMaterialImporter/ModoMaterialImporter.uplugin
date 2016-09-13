@@ -8,7 +8,7 @@
     "CreatedBy" : "The Foundry",
     "CreatedByURL" : "https://www.thefoundry.co.uk/",
     "DocsURL" : "https://help.thefoundry.co.uk/modo/#help/pages/appendices/unreal_material_importer.html",
-    "MarketplaceURL" : "com.epicgames.launcher://ue/marketplace/offers/9cbfb639f28d446983f74d8d400563e0",
+    "MarketplaceURL" : "com.epicgames.launcher://ue/marketplace/content/9cbfb639f28d446983f74d8d400563e0",
     "SupportURL" : "https://www.thefoundry.co.uk/support/",
     "EnabledByDefault" : true,
     "CanContainContent" : false,
@@ -20,25 +20,12 @@
         {
             "Name" : "ModoPlugin",
             "Type" : "Runtime",
-            "LoadingPhase" : "PreDefault",
-            "WhitelistPlatforms" :
-            [
-                "Win64",
-                "Win32",
-                "Mac"
-            ]
-        
+            "LoadingPhase" : "PreDefault"
         },
         {
             "Name" : "ModoMaterialImporter",
             "Type" : "Editor",
-            "LoadingPhase" : "Default",
-            "WhitelistPlatforms" :
-            [
-                "Win64",
-                "Win32",
-                "Mac"
-            ]
+            "LoadingPhase" : "Default"
         }
     ]
 }
