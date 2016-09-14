@@ -12,7 +12,8 @@
  For installation and other information, please read documentation here:<br />
  https://help.thefoundry.co.uk/modo/#help/pages/appendices/unreal_material_importer.html<br />
  
- Intended Platform (tested only): Desktop, Laptop, Windows, Mac OSX
+ Intended Platform (tested only): Desktop, Laptop, Windows, Mac OSX <br />
+ _Linux users may need some tweak in .uplugin file, such as WhiteList to be able to build the plugin on Linux_ <br />
  
  <br>Release Note 2016/9/05</br>
  Fix packaging issue in blueprint projects.<br />
