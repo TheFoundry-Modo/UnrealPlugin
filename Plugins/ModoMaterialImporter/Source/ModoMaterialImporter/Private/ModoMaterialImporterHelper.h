@@ -28,6 +28,5 @@ namespace ModoMaterial
 	public:
 		static bool GetValidePackageName(FString& packageName);
 		static bool RemoveInvalidCharacters(FString& name);
-		static bool RemoveMaterialSlotSuffix(FString& name);
 	};
 }

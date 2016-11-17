@@ -1,0 +1,10 @@
+{
+	"Changelist" : 3195953,
+	"CompatibleChangelist" : 0,
+	"BuildId" : "",
+	"Modules" : 
+	{
+		"ModoPlugin" : "UE4Editor-ModoPlugin.dylib",
+		"ModoMaterialImporter" : "UE4Editor-ModoMaterialImporter.dylib"
+	}
+}

@@ -1,14 +1,14 @@
 {
     "FileVersion" : 3,
-    "Version" : 3,
-    "VersionName" : "4.13.0",
+    "Version" : 4,
+    "VersionName" : "4.14.0",
     "FriendlyName" : "Modo Material Importer Plugin",
     "Description" : "This Plugin converts XML of modo materials to Unreal4 material and texture assets, and is able to apply the imported materials to FBX 3D meshes exported from modo",
     "Category" : "Editor",
     "CreatedBy" : "The Foundry",
     "CreatedByURL" : "https://www.thefoundry.co.uk/",
     "DocsURL" : "https://help.thefoundry.co.uk/modo/#help/pages/appendices/unreal_material_importer.html",
-    "MarketplaceURL" : "com.epicgames.launcher://ue/marketplace/content/9cbfb639f28d446983f74d8d400563e0",
+    "MarketplaceURL" : "com.epicgames.launcher://ue/marketplace/offers/9cbfb639f28d446983f74d8d400563e0",
     "SupportURL" : "https://www.thefoundry.co.uk/support/",
     "EnabledByDefault" : true,
     "CanContainContent" : false,
@@ -21,6 +21,7 @@
             "Name" : "ModoPlugin",
             "Type" : "Runtime",
             "LoadingPhase" : "PreDefault"
+        
         },
         {
             "Name" : "ModoMaterialImporter",
