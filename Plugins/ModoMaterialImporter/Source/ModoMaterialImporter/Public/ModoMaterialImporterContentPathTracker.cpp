@@ -13,26 +13,21 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
- 
-#pragma once
+#include "ModoMaterialImporterPrivatePCH.h"
+#include "ModoMaterialImporterContentPathTracker.h"
 
-#include <map>
-#include <string>
-
-#include "Engine.h"
-#include "Materials/Material.h"
-
-namespace ModoMaterial
+void UContentBrowserPathTracker::OnAssetPathChanged(const FString& newPath)
 {
-	class Assignment
-	{
-	public:
-		void AddMaterial(UMaterial* mat, const FString& name);
-		void ApplyToMeshes(const FString &path);
-		UMaterial* GetMaterial();
-
-	private:
-		std::map<std::string, UMaterial*> Materials;
-	};
+	_path = newPath;
 }
 
+FString UContentBrowserPathTracker::GetPath()
+{
+	return _path;
+}
+
+UContentBrowserPathTracker::UContentBrowserPathTracker(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer)
+{
+	
+}

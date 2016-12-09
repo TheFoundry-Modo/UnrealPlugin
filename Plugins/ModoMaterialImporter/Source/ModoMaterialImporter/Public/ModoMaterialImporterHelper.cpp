@@ -77,6 +77,29 @@ bool CommonHelper::RemoveInvalidCharacters(FString& name)
 	return bChanged;
 }
 
+bool CommonHelper::CorrectInvalidPath(FString& name)
+{
+	bool bChanged = false;
+	FString validName = "";
+
+	for (int i = 0; i < name.Len(); i++)
+	{
+		if (name[i] == '\\')
+		{
+			validName.AppendChar('/');
+			bChanged = true;
+		}
+		else
+		{
+			validName.AppendChar(name[i]);
+		}
+	}
+
+	if (bChanged)
+		name = validName;
+
+	return bChanged;
+}
 
 bool CommonHelper::RemoveMaterialSlotSuffix(FString& name)
 {

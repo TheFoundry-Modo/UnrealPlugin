@@ -13,26 +13,21 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
- 
+
 #pragma once
 
-#include <map>
-#include <string>
+#include "UnrealEd.h"
+#include "ModoMaterialImporterContentPathTracker.generated.h"
 
-#include "Engine.h"
-#include "Materials/Material.h"
-
-namespace ModoMaterial
+UCLASS(hideCategories = Object)
+class UContentBrowserPathTracker : public UObject
 {
-	class Assignment
-	{
-	public:
-		void AddMaterial(UMaterial* mat, const FString& name);
-		void ApplyToMeshes(const FString &path);
-		UMaterial* GetMaterial();
+	GENERATED_UCLASS_BODY()
 
-	private:
-		std::map<std::string, UMaterial*> Materials;
-	};
-}
+public:
+	void OnAssetPathChanged(const FString& newPath);
+	FString GetPath();
 
+private:
+	FString _path;
+};

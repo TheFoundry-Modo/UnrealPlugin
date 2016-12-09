@@ -28,6 +28,7 @@
 #include "Materials/MaterialExpressionConstant2Vector.h"
 #include "Materials/MaterialExpressionConstant.h"
 
+#include "ContentBrowserModule.h"
 #include "AssetRegistryModule.h"
 
 //#define UNKNOWN_CONSTANT_NODES
@@ -39,7 +40,9 @@ using std::vector;
 
 FString MaterialCreator::_path = FString();
 FString MaterialCreator::_rootPath = FString();
+FString MaterialCreator::_contentBrowserPath = FString("/Game");
 TArray< MaterialCreator::ImageInfo> MaterialCreator::_imageInfo;
+TArray<FString> MaterialCreator::_selectedMaterials;
 bool MaterialCreator::_usePtagMaterialName = false;
 
 bool isExt(const FString &str, const FString &ext)
@@ -315,84 +318,351 @@ void LinkTexture(
 }
 
 // Remove all invalid characters in materialName before passing in
-UMaterial* CreateMaterial(FString materialName)
+UMaterial* CreateMaterial(const FString packageName, FString materialName)
 {
 	UMaterialFactoryNew* matFactory = NewObject<UMaterialFactoryNew>();
-	FString PackageName = TEXT("/Game/") + materialName;
 
-	UE_LOG(ModoMaterialImporter, Log, TEXT("Creating package: %s"), *PackageName);
+	// Workaround bug below in UE 4.13 StaticAllocateObject:
+	// Temporary: If the object we found is of a different class, allow the object to be allocated.
+	// This breaks new UObject assumptions and these need to be fixed.
+	FString newPackageName = packageName;
+	// Avoid While(true)
+	const int LoopNum = 32;
+	int i = 0;
 
-	// Deal with invalid long name issue
-	if (!CommonHelper::GetValidePackageName(PackageName))
+	for (i = 0; i < LoopNum; i++)
+	{
+		UPackage* existingPackage = FindPackage(NULL, *newPackageName);
+		if (existingPackage) {
+			UObject* Obj = FindObject<UObject>(existingPackage, *materialName);
+
+			if (Obj && !Obj->GetClass()->IsChildOf(UMaterial::StaticClass()))
+			{
+				UE_LOG(ModoMaterialImporter, Log, TEXT("Skip existing package: %s"), *newPackageName);
+				newPackageName += TEXT("_s1p");
+			}
+			else
+			{
+				break;
+			}
+		}
+		else
+		{
+			break;
+		}
+	}
+
+	if (i == LoopNum) {
+		UE_LOG(ModoMaterialImporter, Log, TEXT("Creating package abort"));
 		return NULL;
+	}
 
-	UPackage* AssetPackage = CreatePackage(NULL, *PackageName);
+	UE_LOG(ModoMaterialImporter, Log, TEXT("Creating package: %s"), *packageName);
+	UPackage* assetPackage = CreatePackage(NULL, *newPackageName);
 	EObjectFlags Flags = RF_Public | RF_Standalone;
 
-	UObject* CreatedAsset = matFactory->FactoryCreateNew(UMaterial::StaticClass(), AssetPackage, FName(*materialName), Flags, NULL, GWarn);
+	UObject* CreatedAsset = matFactory->FactoryCreateNew(UMaterial::StaticClass(), assetPackage, FName(*materialName), Flags, NULL, GWarn);
 
 	if (CreatedAsset)
 	{
 		// Mark the package dirty...
-		AssetPackage->MarkPackageDirty();
+		assetPackage->MarkPackageDirty();
 	}
 
 	return Cast<UMaterial>(CreatedAsset);
 }
 
+void MaterialCreator::SetContentBrowserPathRaw(const FString &path)
+{
+	_contentBrowserPath = path;
+}
+
+FString MaterialCreator::GetContentBrowserPathRaw()
+{
+	return _contentBrowserPath;
+}
+
+void MaterialCreator::ProcessTextureInfo(const TArray< FXmlNode * >& matNodes)
+{
+	_imageInfo.Empty();
+
+	// Find image nodes firstly, we need image properties for images when creating materials
+	for (int j = 0; j < matNodes.Num(); j++)
+	{
+		FXmlNode *matNode = matNodes[j];
+		FString tag = matNode->GetTag();
+
+		if (tag.Equals(TEXT("ImageFiles"), ESearchCase::CaseSensitive))
+		{
+			TArray<FXmlNode*> imageNodes = matNode->GetChildrenNodes();
+
+			for (int32 i = 0; i < imageNodes.Num(); i++)
+			{
+				FXmlNode* imageNode = imageNodes[i];
+
+				if (imageNode->GetTag().Equals(TEXT("file"), ESearchCase::IgnoreCase))
+				{
+					ImageInfo imageInfo;
+					imageInfo.filename = imageNode->GetAttribute(FString("filename"));
+
+					FString imageCC = imageNode->GetAttribute(FString("color_correction"));
+					UE_LOG(ModoMaterialImporter, Log, TEXT("Load image properties: %s [%s]"), *imageInfo.filename, *imageCC);
+
+					if (imageCC.Equals(TEXT("linear"), ESearchCase::IgnoreCase))
+						imageInfo.colorSpace = ColorSpace::Linear;
+					else
+						imageInfo.colorSpace = ColorSpace::sRGB;
+
+					_imageInfo.Add(imageInfo);
+				}
+			}
+			break;
+		}
+	}
+}
+
+void MaterialCreator::ProcessMaterial(FXmlNode *matNode, const FString& contentPath, Assignment* matAssign)
+{
+	FString matID = matNode->GetAttribute(FString("ID"));
+	FString ptag = FString();
+	int graphOffset = -64;
+
+	if (matID.IsEmpty())
+	{
+		UE_LOG(ModoMaterialImporter, Log, TEXT("Invalid Material ID"));
+		return;
+	}
+
+	ptag = matNode->GetAttribute(FString("ptag"));
+
+	TArray<FXmlNode*> propertyNodes = matNode->GetChildrenNodes();
+
+	FXmlNode * baseColorNode = NULL;
+	FXmlNode * metallicNode = NULL;
+	FXmlNode * opacityNode = NULL;
+	FXmlNode * emissiveColorNode = NULL;
+	FXmlNode * specularNode = NULL;
+	FXmlNode * normalNode = NULL;
+	FXmlNode * roughnessNode = NULL;
+	FXmlNode * clearcoatNode = NULL;
+	FXmlNode * clearcoatRoughNode = NULL;
+	FXmlNode * ambientOcclusionNode = NULL;
+	FXmlNode * subsurfaceColorNode = NULL;
+
+	TArray<FXmlNode *> unkownNodes;
+
+	for (int32 i = 0; i < propertyNodes.Num(); i++)
+	{
+		FXmlNode* propertyNode = propertyNodes[i];
+		if (propertyNode->GetTag().Equals(TEXT("property"), ESearchCase::IgnoreCase))
+		{
+			FString propertyName = propertyNode->GetAttribute(FString("name"));
+			UE_LOG(ModoMaterialImporter, Log, TEXT("Load property %s"), *propertyName);
+
+			if (propertyName.Equals(TEXT("Base Color"), ESearchCase::IgnoreCase) || propertyName.Equals(TEXT("Unreal Base Color"), ESearchCase::IgnoreCase))
+				baseColorNode = propertyNode;
+			else if (propertyName.Equals(TEXT("Metallic"), ESearchCase::IgnoreCase) || propertyName.Equals(TEXT("Unreal Metallic"), ESearchCase::IgnoreCase))
+				metallicNode = propertyNode;
+			else if (propertyName.Equals(TEXT("Opacity"), ESearchCase::IgnoreCase) || propertyName.Equals(TEXT("Unreal Opacity"), ESearchCase::IgnoreCase))
+				opacityNode = propertyNode;
+			else if (propertyName.Equals(TEXT("Emissive Color"), ESearchCase::IgnoreCase) || propertyName.Equals(TEXT("Unreal Emissive Color"), ESearchCase::IgnoreCase))
+				emissiveColorNode = propertyNode;
+			else if (propertyName.Equals(TEXT("Specular"), ESearchCase::IgnoreCase) || propertyName.Equals(TEXT("Unreal Specular"), ESearchCase::IgnoreCase))
+				specularNode = propertyNode;
+			else if (propertyName.Equals(TEXT("Normal"), ESearchCase::IgnoreCase) || propertyName.Equals(TEXT("Unreal Normal"), ESearchCase::IgnoreCase))
+				normalNode = propertyNode;
+			else if (propertyName.Equals(TEXT("Roughness"), ESearchCase::IgnoreCase) || propertyName.Equals(TEXT("Unreal Roughness"), ESearchCase::IgnoreCase))
+				roughnessNode = propertyNode;
+			else if (propertyName.Equals(TEXT("Clearcoat Amount"), ESearchCase::IgnoreCase) || propertyName.Equals(TEXT("Unreal Clearcoat Amount"), ESearchCase::IgnoreCase))
+				clearcoatNode = propertyNode;
+			else if (propertyName.Equals(TEXT("Clearcoat Roughness"), ESearchCase::IgnoreCase) || propertyName.Equals(TEXT("Unreal Clearcoat Roughness"), ESearchCase::IgnoreCase))
+				clearcoatRoughNode = propertyNode;
+			else if (propertyName.Equals(TEXT("Ambient Occlusion"), ESearchCase::IgnoreCase) || propertyName.Equals(TEXT("Unreal Ambient Occlusion"), ESearchCase::IgnoreCase))
+				ambientOcclusionNode = propertyNode;
+			else if (propertyName.Equals(TEXT("Subsurface Color"), ESearchCase::IgnoreCase) || propertyName.Equals(TEXT("UNreal Subsurface Color"), ESearchCase::IgnoreCase))
+				subsurfaceColorNode = propertyNode;
+			else
+			{
+				unkownNodes.Add(propertyNode);
+				UE_LOG(ModoMaterialImporter, Log, TEXT("property %s is not supported, append to unknow nodes"), *propertyName);
+			}
+
+			// TODO: Bump
+		}
+		else
+		{
+			UE_LOG(ModoMaterialImporter, Log, TEXT("Ignore non-property node"));
+		}
+	}
+
+	FString materialName;
+	if (_usePtagMaterialName)
+	{
+		// Use the ptag for the material name.
+		if (!ptag.IsEmpty())
+			materialName = ptag;
+		else
+			return;
+
+		// Remove invalid characters and any '_skinXX' suffix from the material name.
+		CommonHelper::RemoveInvalidCharacters(materialName);
+		CommonHelper::RemoveMaterialSlotSuffix(materialName);
+	}
+	else
+	{
+		// Use nested material ID for the material name.
+		materialName = matID;
+		materialName = materialName + FString("_") + ptag;
+
+		// Remove invalid characters
+		CommonHelper::RemoveInvalidCharacters(materialName);
+	}
+
+	UMaterial	*mat = NULL;
+	bool		 isNew = true;
+	// Workflow: If no material is selected, we import all materials from XML
+	// If any materials are selected, we update only selected materails from XML if they match.
+	// This is useful, when there are a lot of materials in XML, but users only changed some of them.
+	// So that importing could be faster.
+
+	FString packageName = contentPath + TEXT("/") + materialName;
+
+	// Deal with invalid long name issue
+	if (!CommonHelper::GetValidePackageName(packageName))
+		return;
+
+	// update material if any selected materials matches the material name
+	if (_selectedMaterials.Num())
+	{
+		for (int32 i = 0; i < _selectedMaterials.Num(); i++)
+		{
+			FString& selectedPackageName = _selectedMaterials[i];
+
+			// only update when selected materials are in current package
+			if (packageName == selectedPackageName)
+				mat = CreateMaterial(packageName, materialName);
+		}
+	}
+	else // create materials if no materials are selected
+		mat = CreateMaterial(packageName, materialName);
+
+	// early skip if no material could be created/updated
+	if (mat == NULL) {
+		UE_LOG(ModoMaterialImporter, Log, TEXT("Material %s creation failed"), *materialName);
+		return;
+	}
+
+	if (ptag.IsEmpty())
+	{
+		UE_LOG(ModoMaterialImporter, Log, TEXT("Material %s doesn't have a ptag for auto assignment!"), *mat->GetName());
+	}
+	else
+	{
+		// use ptag for material matching, make sure ptag here is the same as the ptag in FBX file.
+		matAssign->AddMaterial(mat, ptag);
+	}
+
+	IAssetEditorInstance* OpenEditor = FAssetEditorManager::Get().FindEditorForAsset(mat, true);
+	IMaterialEditor* CurrentMaterialEditor = (IMaterialEditor*)OpenEditor;
+
+	bool useTransparent, useClearCoat, useSubsurface;
+
+	useTransparent = false;
+	useClearCoat = false;
+	useSubsurface = false;
+
+	AddColorParam(baseColorNode, mat, mat->BaseColor, graphOffset);
+	AddFloatParam(metallicNode, mat, mat->Metallic, graphOffset);
+
+	useTransparent = AddFloatParam(opacityNode, mat, mat->Opacity, graphOffset);
+
+	AddColorParam(emissiveColorNode, mat, mat->EmissiveColor, graphOffset);
+	AddVectorParam(normalNode, mat, mat->Normal, graphOffset, SAMPLERTYPE_Normal);
+	AddFloatParam(specularNode, mat, mat->Specular, graphOffset);
+	AddFloatParam(roughnessNode, mat, mat->Roughness, graphOffset);
+
+	useClearCoat |= AddFloatParam(clearcoatNode, mat, mat->ClearCoat, graphOffset);
+	useClearCoat |= AddFloatParam(clearcoatRoughNode, mat, mat->ClearCoatRoughness, graphOffset);
+
+	AddFloatParam(ambientOcclusionNode, mat, mat->AmbientOcclusion, graphOffset);
+
+	useSubsurface = AddColorParam(subsurfaceColorNode, mat, mat->SubsurfaceColor, graphOffset);
+
+	if (useTransparent)
+		mat->BlendMode = BLEND_Translucent;
+
+	if (useClearCoat)
+		mat->SetShadingModel(MSM_ClearCoat);
+
+	if (useSubsurface)
+		mat->SetShadingModel(MSM_Subsurface);
+
+	if (useTransparent || useClearCoat || useSubsurface)
+		mat->PostEditChange();
+
+	for (int i = 0; i < unkownNodes.Num(); i++)
+		AddUnkownParam(unkownNodes[i], mat, graphOffset);
+
+	if (isNew)
+		FAssetRegistryModule::AssetCreated(mat);
+
+	if (mat)
+	{
+		FAssetEditorManager::Get().OpenEditorForAsset(mat);
+	}
+}
+
 void MaterialCreator::LoadMaterial(FXmlFile *matXml, const FString &path, Assignment* matAssign)
 {
-	FXmlNode *rootNode = matXml->GetRootNode();
+	FXmlNode		*rootNode = matXml->GetRootNode();
+	_selectedMaterials.Empty();
+
+	// Get current content browser path
+	FString targetPath = _contentBrowserPath;
+	UE_LOG(ModoMaterialImporter, Log, TEXT("Current Content Path: %s"), *targetPath);
+
+	// Get selected materials in content browser.
+	{
+		TArray<FAssetData>	 SelectedAssets;
+		GEditor->GetContentBrowserSelections(SelectedAssets);
+		if (SelectedAssets.Num() != 0)
+		{
+			for (int32 i = 0; i < SelectedAssets.Num(); i++)
+			{
+				FAssetData& Asset = SelectedAssets[0];
+				if (Asset.GetClass() == UMaterial::StaticClass())
+					_selectedMaterials.Add(Asset.PackageName.ToString());
+				else if (Asset.GetClass() == UStaticMesh::StaticClass())
+				{
+					UStaticMesh *mesh = dynamic_cast<UStaticMesh*>(Asset.GetAsset());
+
+					if (mesh == NULL)
+						continue;
+
+					for (int j = 0; j < mesh->Materials.Num(); j++) {
+						UMaterial* material = mesh->Materials[j]->GetMaterial();
+						FString packageName = FPaths::GetPath(material->GetPathName()) + "/" + material->GetName();
+						_selectedMaterials.Add(packageName);
+					}
+				}
+			}
+		}
+	}
 
 	if (rootNode != NULL)
 	{
-
-		const TArray< FXmlNode * > matNodes = rootNode->GetChildrenNodes();
-
 		// The path of the XML file is used as the base path when "Relative Export Path" is checked in the exporter settings.
-		_path = FString (path);
-		_imageInfo.Empty();
+		_path = FString(path);
 		_usePtagMaterialName = false;
 
-		// Find image nodes firstly, we need image properties for images when creating materials
+		// Load texture info firstly
+		const TArray< FXmlNode * > matNodes = rootNode->GetChildrenNodes();
+		ProcessTextureInfo(matNodes);
+		
 		for (int j = 0; j < matNodes.Num(); j++)
 		{
 			FXmlNode *matNode = matNodes[j];
 			FString tag = matNode->GetTag();
-
-			if (tag.Equals(TEXT("ImageFiles"), ESearchCase::CaseSensitive))
-			{
-				TArray<FXmlNode*> imageNodes = matNode->GetChildrenNodes();
-
-				for (int32 i = 0; i < imageNodes.Num(); i++)
-				{
-					FXmlNode* imageNode = imageNodes[i];
-
-					if (imageNode->GetTag().Equals(TEXT("file"), ESearchCase::IgnoreCase))
-					{
-						ImageInfo imageInfo;
-						imageInfo.filename = imageNode->GetAttribute(FString("filename"));
-
-						FString imageCC = imageNode->GetAttribute(FString("color_correction"));
-						UE_LOG(ModoMaterialImporter, Log, TEXT("Load image properties: %s [%s]"), *imageInfo.filename, *imageCC);
-
-						if (imageCC.Equals(TEXT("linear"), ESearchCase::IgnoreCase))
-							imageInfo.colorSpace = ColorSpace::Linear;
-						else
-							imageInfo.colorSpace = ColorSpace::sRGB;
-
-						_imageInfo.Add(imageInfo);
-					}
-				}
-				break;
-			}
-		}
-
-		for (int j = 0; j < matNodes.Num(); j++)
-		{
-			FXmlNode *matNode = matNodes[j];
-			FString tag = matNode->GetTag();
-			FString ptag = FString();
 
 			if (tag.Equals(TEXT("Version"), ESearchCase::CaseSensitive))
 			{
@@ -434,169 +704,10 @@ void MaterialCreator::LoadMaterial(FXmlFile *matXml, const FString &path, Assign
 			}
 			else if (tag.Equals(TEXT("Material"), ESearchCase::CaseSensitive))
 			{
-
-				FString matID = matNode->GetAttribute(FString("ID"));
-				int graphOffset = -64;
-
-				if (matID.IsEmpty())
-				{
-					UE_LOG(ModoMaterialImporter, Log, TEXT("Invalid Material ID"));
-					return;
-				}
-
-				ptag = matNode->GetAttribute(FString("ptag"));
-
-				TArray<FXmlNode*> propertyNodes = matNode->GetChildrenNodes();
-
-				FXmlNode * baseColorNode = NULL;
-				FXmlNode * metallicNode = NULL;
-				FXmlNode * opacityNode = NULL;
-				FXmlNode * emissiveColorNode = NULL;
-				FXmlNode * specularNode = NULL;
-				FXmlNode * normalNode = NULL;
-				FXmlNode * roughnessNode = NULL;
-				FXmlNode * clearcoatNode = NULL;
-				FXmlNode * clearcoatRoughNode = NULL;
-				FXmlNode * ambientOcclusionNode = NULL;
-				FXmlNode * subsurfaceColorNode = NULL;
-
-				TArray<FXmlNode *> unkownNodes;
-
-				for (int32 i = 0; i < propertyNodes.Num(); i++)
-				{
-					FXmlNode* propertyNode = propertyNodes[i];
-					if (propertyNode->GetTag().Equals(TEXT("property"), ESearchCase::IgnoreCase))
-					{
-						FString propertyName = propertyNode->GetAttribute(FString("name"));
-						UE_LOG(ModoMaterialImporter, Log, TEXT("Load property %s"), *propertyName);
-
-						if (propertyName.Equals(TEXT("Base Color"), ESearchCase::IgnoreCase) || propertyName.Equals(TEXT("Unreal Base Color"), ESearchCase::IgnoreCase))
-							baseColorNode = propertyNode;
-						else if (propertyName.Equals(TEXT("Metallic"), ESearchCase::IgnoreCase) || propertyName.Equals(TEXT("Unreal Metallic"), ESearchCase::IgnoreCase))
-							metallicNode = propertyNode;
-						else if (propertyName.Equals(TEXT("Opacity"), ESearchCase::IgnoreCase) || propertyName.Equals(TEXT("Unreal Opacity"), ESearchCase::IgnoreCase))
-							opacityNode = propertyNode;
-						else if (propertyName.Equals(TEXT("Emissive Color"), ESearchCase::IgnoreCase) || propertyName.Equals(TEXT("Unreal Emissive Color"), ESearchCase::IgnoreCase))
-							emissiveColorNode = propertyNode;
-						else if (propertyName.Equals(TEXT("Specular"), ESearchCase::IgnoreCase) || propertyName.Equals(TEXT("Unreal Specular"), ESearchCase::IgnoreCase))
-							specularNode = propertyNode;
-						else if (propertyName.Equals(TEXT("Normal"), ESearchCase::IgnoreCase) || propertyName.Equals(TEXT("Unreal Normal"), ESearchCase::IgnoreCase))
-							normalNode = propertyNode;
-						else if (propertyName.Equals(TEXT("Roughness"), ESearchCase::IgnoreCase) || propertyName.Equals(TEXT("Unreal Roughness"), ESearchCase::IgnoreCase))
-							roughnessNode = propertyNode;
-						else if (propertyName.Equals(TEXT("Clearcoat Amount"), ESearchCase::IgnoreCase) || propertyName.Equals(TEXT("Unreal Clearcoat Amount"), ESearchCase::IgnoreCase))
-							clearcoatNode = propertyNode;
-						else if (propertyName.Equals(TEXT("Clearcoat Roughness"), ESearchCase::IgnoreCase) || propertyName.Equals(TEXT("Unreal Clearcoat Roughness"), ESearchCase::IgnoreCase))
-							clearcoatRoughNode = propertyNode;
-						else if (propertyName.Equals(TEXT("Ambient Occlusion"), ESearchCase::IgnoreCase) || propertyName.Equals(TEXT("Unreal Ambient Occlusion"), ESearchCase::IgnoreCase))
-							ambientOcclusionNode = propertyNode;
-						else if (propertyName.Equals(TEXT("Subsurface Color"), ESearchCase::IgnoreCase) || propertyName.Equals(TEXT("UNreal Subsurface Color"), ESearchCase::IgnoreCase))
-							subsurfaceColorNode = propertyNode;
-						else
-						{
-							unkownNodes.Add(propertyNode);
-							UE_LOG(ModoMaterialImporter, Log, TEXT("property %s is not supported, append to unknow nodes"), *propertyName);
-						}
-
-						// TODO: Bump
-					}
-					else
-					{
-						UE_LOG(ModoMaterialImporter, Log, TEXT("Ignore non-property node"));
-					}
-				}
-
-				FString materialName;
-
-				if (_usePtagMaterialName)
-				{
-					// Use the ptag for the material name.
-					if (!ptag.IsEmpty())
-						materialName = ptag;
-					else
-						return;
-
-					// Remove invalid characters and any '_skinXX' suffix from the material name.
-					CommonHelper::RemoveInvalidCharacters(materialName);
-					CommonHelper::RemoveMaterialSlotSuffix(materialName);
-				}
-				else
-				{
-					// Use nested material ID for the material name.
-					materialName = matID;
-					materialName = materialName + FString("_") + ptag;
-
-					// Remove invalid characters
-					CommonHelper::RemoveInvalidCharacters(materialName);
-				}
-
-				UMaterial* mat = CreateMaterial(materialName);
-
-				if (!mat)
-					return;
-
-				if (ptag.IsEmpty())
-				{
-					UE_LOG(ModoMaterialImporter, Log, TEXT("Material %s doesn't have a ptag for auto assignment!"), *mat->GetName());
-				}
-				else
-				{
-					// use ptag for material matching, make sure ptag here is the same as the ptag in FBX file.
-					matAssign->AddMaterial(mat, ptag);
-				}
-
-				IAssetEditorInstance* OpenEditor = FAssetEditorManager::Get().FindEditorForAsset(mat, true);
-				IMaterialEditor* CurrentMaterialEditor = (IMaterialEditor*)OpenEditor;
-
-
-				bool useTransparent, useClearCoat, useSubsurface;
-
-				useTransparent = false;
-				useClearCoat = false;
-				useSubsurface = false;
-
-				AddColorParam(baseColorNode, mat, mat->BaseColor, graphOffset);
-				AddFloatParam(metallicNode, mat, mat->Metallic, graphOffset);
-
-				useTransparent = AddFloatParam(opacityNode, mat, mat->Opacity, graphOffset);
-
-				AddColorParam(emissiveColorNode, mat, mat->EmissiveColor, graphOffset);
-				AddVectorParam(normalNode, mat, mat->Normal, graphOffset, SAMPLERTYPE_Normal);
-				AddFloatParam(specularNode, mat, mat->Specular, graphOffset);
-				AddFloatParam(roughnessNode, mat, mat->Roughness, graphOffset);
-				
-				useClearCoat |= AddFloatParam(clearcoatNode, mat, mat->ClearCoat, graphOffset);
-				useClearCoat |= AddFloatParam(clearcoatRoughNode, mat, mat->ClearCoatRoughness, graphOffset);
-
-				AddFloatParam(ambientOcclusionNode, mat, mat->AmbientOcclusion, graphOffset);
-				
-				useSubsurface = AddColorParam(subsurfaceColorNode, mat, mat->SubsurfaceColor, graphOffset);
-
-				if (useTransparent)
-					mat->BlendMode = BLEND_Translucent;
-
-				if (useClearCoat)
-					mat->SetShadingModel(MSM_ClearCoat);
-				
-				if (useSubsurface)
-					mat->SetShadingModel(MSM_Subsurface);
-
-				if (useTransparent || useClearCoat || useSubsurface)
-					mat->PostEditChange();
-
-				for (int i = 0; i < unkownNodes.Num(); i++)
-					AddUnkownParam(unkownNodes[i], mat, graphOffset);
-
-				FAssetRegistryModule::AssetCreated(mat);
-
-				if (mat)
-				{
-					FAssetEditorManager::Get().OpenEditorForAsset(mat);
-				}
+				ProcessMaterial(matNode, targetPath, matAssign);
 			}
 			else
 			{
-
 				UE_LOG(ModoMaterialImporter, Log, TEXT("Invalid Material Tag %s"), *tag);
 			}
 		}
@@ -655,7 +766,7 @@ bool MaterialCreator::AddFloatParam(FXmlNode *Node, UMaterial* mat, FMaterialInp
 			if (!content.IsEmpty() && isTextureFileName(content))
 			{
 				ModoMaterial::TextureManager * texManager = ModoMaterial::TextureManager::Instance();
-				UTexture* tex = texManager->LoadTexture(*content, _path, _rootPath, isSRGB, TC_Default);
+				UTexture* tex = texManager->LoadTexture(*content, _path, _rootPath, _contentBrowserPath, isSRGB, TC_Default);
 				if (tex)
 				{
 					FString wrapU = texNode->GetAttribute("wrapU");
@@ -732,7 +843,7 @@ bool MaterialCreator::AddVectorParam(FXmlNode *Node, UMaterial* mat, FMaterialIn
 				if (type == SAMPLERTYPE_Normal)
 					texCompSet = TC_Normalmap;
 
-				UTexture* tex = texManager->LoadTexture(*content, _path, _rootPath, isSRGB, texCompSet);
+				UTexture* tex = texManager->LoadTexture(*content, _path, _rootPath, _contentBrowserPath, isSRGB, texCompSet);
 				if (tex)
 				{
 					FString wrapU = texNode->GetAttribute("wrapU");
@@ -801,7 +912,7 @@ bool MaterialCreator::AddColorParam(FXmlNode *Node, UMaterial* mat, FMaterialInp
 			if (!content.IsEmpty() && isTextureFileName(content))
 			{
 				ModoMaterial::TextureManager * texManager = ModoMaterial::TextureManager::Instance();
-				UTexture* tex = texManager->LoadTexture(*content, _path, _rootPath, isSRGB, TC_Default);
+				UTexture* tex = texManager->LoadTexture(*content, _path, _rootPath, _contentBrowserPath, isSRGB, TC_Default);
 				if (tex)
 				{
 					FString wrapU = texNode->GetAttribute("wrapU");
@@ -878,7 +989,7 @@ void MaterialCreator::AddUnkownParam(FXmlNode *Node, UMaterial* mat, int &graphO
 			if (!content.IsEmpty() && isTextureFileName(content))
 			{
 				ModoMaterial::TextureManager * texManager = ModoMaterial::TextureManager::Instance();
-				UTexture* tex = texManager->LoadTexture(*content, _path, _rootPath, isSRGB, TC_Default);
+				UTexture* tex = texManager->LoadTexture(*content, _path, _rootPath, _contentBrowserPath, isSRGB, TC_Default);
 				if (tex)
 				{
 					FString wrapU = texNode->GetAttribute("wrapU");

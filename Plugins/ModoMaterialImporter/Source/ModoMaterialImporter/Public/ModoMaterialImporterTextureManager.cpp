@@ -44,14 +44,30 @@ TextureManager::~TextureManager()
 
 }
 
-UTexture* TextureManager::LoadTexture(const FString& TextureFilename, const FString& path, const FString& rootPath, bool isSRGB, TextureCompressionSettings compSetting)
+UTexture* TextureManager::LoadTexture(const FString& TextureFilename, const FString& path, const FString& rootPath, const FString& contentPath, bool isSRGB, TextureCompressionSettings compSetting)
 {
 	FString BaseName = FPaths::GetBaseFilename(TextureFilename);
+	FString texturePath = FPaths::GetPath(TextureFilename);
+	FString PackageName = TEXT("/Game/") + BaseName;
 
 	// Remove invalid characters from the texture name.
 	CommonHelper::RemoveInvalidCharacters(BaseName);
+	CommonHelper::CorrectInvalidPath(texturePath);
 
-	FString PackageName = TEXT("/Game/") + BaseName;
+	if (FPaths::IsRelative(texturePath))
+	{
+		PackageName = contentPath + TEXT("/") + texturePath + TEXT("/") + BaseName;
+	}
+	else
+	{
+		FString retrievedPath = texturePath.Replace(*rootPath, TEXT(""));
+		CommonHelper::CorrectInvalidPath(retrievedPath);
+		if (FPaths::IsRelative (retrievedPath))
+			PackageName = contentPath + retrievedPath + BaseName;
+		else
+			UE_LOG(ModoMaterialImporter, Log, TEXT("Texture save path retrieving failed: %s"), *retrievedPath);
+
+	}
 
 	UE_LOG(ModoMaterialImporter, Log, TEXT("Creating texture: %s"), *PackageName);
 
@@ -59,8 +75,10 @@ UTexture* TextureManager::LoadTexture(const FString& TextureFilename, const FStr
 	if (!CommonHelper::GetValidePackageName(PackageName))
 		return NULL;
 
-	// Find if the texture exists anywhere in the content, in any package
-	UTexture* tex = FindObjectFast<UTexture>(NULL, *BaseName, false, true);
+#if 0
+	// Find if the texture exists in the current content path
+	UPackage* existingPackage = FindPackage(NULL, *PackageName);
+	UTexture* tex = FindObjectFast<UTexture>(existingPackage, *BaseName, false, false);
 	if (tex)
 	{
 		// If the texture doesn't match current setting, we need update it
@@ -82,7 +100,7 @@ UTexture* TextureManager::LoadTexture(const FString& TextureFilename, const FStr
 
 		return tex;
 	}
-	
+#endif
 	// Texture not found, create a new one by binary loading it and packing
 	// Try method 1, 2, 3. Early return if texture file not found
 	
