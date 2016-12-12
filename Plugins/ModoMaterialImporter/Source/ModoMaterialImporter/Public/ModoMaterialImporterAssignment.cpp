@@ -48,6 +48,83 @@ UMaterial* Assignment::GetMaterial()
 		return NULL;
 }
 
+void Assignment::UpdateMaterialFlags(const FString &path)
+{
+	UClass *refMeshClass = UStaticMesh::StaticClass();
+	UClass *refSkeletaMeshClass = USkeletalMesh::StaticClass();
+	FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(FName("AssetRegistry"));
+	IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
+
+	TArray<FString> PathsToScan;
+	PathsToScan.Add(path);
+	AssetRegistry.ScanPathsSynchronous(PathsToScan);
+
+	TArray<FAssetData> MeshAssetList;
+	AssetRegistry.GetAssetsByPath(FName(*path), MeshAssetList);
+
+	UpdateMaterialFlags (MeshAssetList);
+}
+
+void Assignment::UpdateMaterialFlags(const TArray<FAssetData> &MeshAssetList)
+{
+	UClass *refMeshClass = UStaticMesh::StaticClass();
+	UClass *refSkeletaMeshClass = USkeletalMesh::StaticClass();
+
+	UE_LOG(ModoMaterialImporter, Log, TEXT("Update Material Flag according to usage"));
+
+	for (int j = 0; j < MeshAssetList.Num(); j++)
+	{
+		UObject* asset = MeshAssetList[j].GetAsset();
+
+		if (asset == NULL)
+			continue;
+
+		if (asset->GetClass() == refMeshClass)
+		{
+			UStaticMesh* staticMesh = dynamic_cast<UStaticMesh*> (asset);
+
+			if (staticMesh != NULL)
+			{
+				for (int i = 0; i < staticMesh->StaticMaterials.Num(); i++)
+				{
+					UMaterial* material = staticMesh->StaticMaterials[i].MaterialInterface->GetMaterial();
+
+					if (material == NULL)
+						continue;
+
+					material->bUsedWithSkeletalMesh = false;
+				}
+			}
+		}
+	}
+
+	for (int j = 0; j < MeshAssetList.Num(); j++)
+	{
+		UObject* asset = MeshAssetList[j].GetAsset();
+
+		if (asset == NULL)
+			continue;
+
+		if (asset->GetClass() == refSkeletaMeshClass)
+		{
+			USkeletalMesh* skeletalMesh = dynamic_cast<USkeletalMesh*> (asset);
+
+			if (skeletalMesh != NULL)
+			{
+				for (int i = 0; i < skeletalMesh->Materials.Num(); i++)
+				{
+					UMaterial* material = skeletalMesh->Materials[i].MaterialInterface->GetMaterial();
+
+					if (material == NULL)
+						continue;
+
+					material->bUsedWithSkeletalMesh = true;
+				}
+			}
+		}
+	}
+}
+
 void Assignment::ApplyToMeshes(const FString &path)
 {
 	UClass *refMeshClass = UStaticMesh::StaticClass();
@@ -77,9 +154,9 @@ void Assignment::ApplyToMeshes(const FString &path)
 
 			if (staticMesh != NULL)
 			{
-				for (int i = 0; i < staticMesh->Materials.Num(); i++)
+				for (int i = 0; i < staticMesh->StaticMaterials.Num(); i++)
 				{
-					UMaterialInterface* material = staticMesh->Materials[i];
+					UMaterialInterface* material = staticMesh->StaticMaterials[i].MaterialInterface;
 
 					// It seems a UE4 bug, GetNumMaterials contains NULL materials!
 					if (material == NULL)
@@ -91,7 +168,7 @@ void Assignment::ApplyToMeshes(const FString &path)
 					if (mat_itr != Materials.end())
 					{
 						UE_LOG(ModoMaterialImporter, Log, TEXT("Set Material: %s"), *material->GetName());
-						staticMesh->Materials[i] =  mat_itr->second;
+						staticMesh->StaticMaterials[i].MaterialInterface =  mat_itr->second;
 					}
 				}
 			}
@@ -125,4 +202,6 @@ void Assignment::ApplyToMeshes(const FString &path)
 			}
 		}
 	}
+
+	UpdateMaterialFlags (MeshAssetList);
 }

@@ -612,7 +612,7 @@ void MaterialCreator::ProcessMaterial(FXmlNode *matNode, const FString& contentP
 	}
 }
 
-void MaterialCreator::LoadMaterial(FXmlFile *matXml, const FString &path, Assignment* matAssign)
+bool MaterialCreator::LoadMaterial(FXmlFile *matXml, const FString &path, Assignment* matAssign)
 {
 	FXmlNode		*rootNode = matXml->GetRootNode();
 	_selectedMaterials.Empty();
@@ -629,7 +629,7 @@ void MaterialCreator::LoadMaterial(FXmlFile *matXml, const FString &path, Assign
 		{
 			for (int32 i = 0; i < SelectedAssets.Num(); i++)
 			{
-				FAssetData& Asset = SelectedAssets[0];
+				FAssetData& Asset = SelectedAssets[i];
 				if (Asset.GetClass() == UMaterial::StaticClass())
 					_selectedMaterials.Add(Asset.PackageName.ToString());
 				else if (Asset.GetClass() == UStaticMesh::StaticClass())
@@ -639,8 +639,21 @@ void MaterialCreator::LoadMaterial(FXmlFile *matXml, const FString &path, Assign
 					if (mesh == NULL)
 						continue;
 
+					for (int j = 0; j < mesh->StaticMaterials.Num(); j++) {
+						UMaterial* material = mesh->StaticMaterials[j].MaterialInterface->GetMaterial();
+						FString packageName = FPaths::GetPath(material->GetPathName()) + "/" + material->GetName();
+						_selectedMaterials.Add(packageName);
+					}
+				}
+				else if (Asset.GetClass() == USkeletalMesh::StaticClass())
+				{
+					USkeletalMesh *mesh = dynamic_cast<USkeletalMesh*>(Asset.GetAsset());
+
+					if (mesh == NULL)
+						continue;
+
 					for (int j = 0; j < mesh->Materials.Num(); j++) {
-						UMaterial* material = mesh->Materials[j]->GetMaterial();
+						UMaterial* material = mesh->Materials[j].MaterialInterface->GetMaterial();
 						FString packageName = FPaths::GetPath(material->GetPathName()) + "/" + material->GetName();
 						_selectedMaterials.Add(packageName);
 					}
@@ -712,6 +725,8 @@ void MaterialCreator::LoadMaterial(FXmlFile *matXml, const FString &path, Assign
 			}
 		}
 	}
+
+	return _usePtagMaterialName;
 }
 
 void MaterialCreator::FindTextureNodes(const FXmlNode *Node, TArray<TextureInfo>& txtrInfos)

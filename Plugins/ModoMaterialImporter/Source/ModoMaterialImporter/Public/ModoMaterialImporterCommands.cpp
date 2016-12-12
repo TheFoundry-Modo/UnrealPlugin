@@ -25,3 +25,5 @@ void ModoMaterialImporterCommands::RegisterCommands()
 	UI_COMMAND(Button, "ModoMaterialImporter", "Import a modo material description file (XML)", EUserInterfaceActionType::Button, FInputGesture());
 }
 PRAGMA_ENABLE_OPTIMIZATION
+
+#undef LOCTEXT_NAMESPACE

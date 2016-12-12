@@ -31,7 +31,7 @@ namespace ModoMaterial
 	{
 	public:
 
-		static void LoadMaterial(FXmlFile *matXml, const FString &path, Assignment* matAssign);
+		static bool LoadMaterial(FXmlFile *matXml, const FString &path, Assignment* matAssign);
 		static void SetContentBrowserPathRaw(const FString &path);
 		static FString GetContentBrowserPathRaw();
 
