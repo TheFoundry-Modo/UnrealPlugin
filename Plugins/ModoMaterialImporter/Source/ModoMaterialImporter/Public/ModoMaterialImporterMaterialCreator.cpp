@@ -629,7 +629,7 @@ void MaterialCreator::LoadMaterial(FXmlFile *matXml, const FString &path, Assign
 		{
 			for (int32 i = 0; i < SelectedAssets.Num(); i++)
 			{
-				FAssetData& Asset = SelectedAssets[0];
+				FAssetData& Asset = SelectedAssets[i];
 				if (Asset.GetClass() == UMaterial::StaticClass())
 					_selectedMaterials.Add(Asset.PackageName.ToString());
 				else if (Asset.GetClass() == UStaticMesh::StaticClass())
