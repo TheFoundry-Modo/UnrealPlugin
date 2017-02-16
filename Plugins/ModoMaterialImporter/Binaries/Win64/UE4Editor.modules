@@ -1,0 +1,9 @@
+{
+	"Changelist" : 3299760,
+	"BuildId" : "c8464d5e-be72-4110-8a4c-9590b1995e06",
+	"Modules" : 
+	{
+		"ModoPlugin" : "UE4Editor-ModoPlugin.dll",
+		"ModoMaterialImporter" : "UE4Editor-ModoMaterialImporter.dll"
+	}
+}
