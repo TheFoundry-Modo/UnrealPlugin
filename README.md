@@ -4,11 +4,12 @@
  Master is usually under heavy development. Binaries and source code on the master are for Unreal 4.14.0<br />
  
  Current Release that is identical to the one on UE4 Marketplace is here:<br />
- https://github.com/TheFoundry-Modo/UnrealPlugin/tree/UE4_14_0
+ https://github.com/TheFoundry-Modo/UnrealPlugin/tree/UE4_15_0
  
  Older versions are zipped in other branches:<br />
  https://github.com/TheFoundry-Modo/UnrealPlugin/tree/legacy_unreal_versions<br />
  https://github.com/TheFoundry-Modo/UnrealPlugin/tree/UE4_13_0<br />
+ https://github.com/TheFoundry-Modo/UnrealPlugin/tree/UE4_14_0
  
  For installation and other information, please read documentation here:<br />
  https://help.thefoundry.co.uk/modo/#help/pages/appendices/unreal_material_importer.html<br />
