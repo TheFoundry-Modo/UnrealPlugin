@@ -23,7 +23,6 @@
 
 #include "ModoMaterialImporterAssignment.h"
 #include "ModoMaterialImporterTextureManager.h"
-#include "ModoMaterialImporterContentPathTracker.h"
 
 namespace ModoMaterial
 {
@@ -31,9 +30,7 @@ namespace ModoMaterial
 	{
 	public:
 
-		static bool LoadMaterial(FXmlFile *matXml, const FString &path, Assignment* matAssign);
-		static void SetContentBrowserPathRaw(const FString &path);
-		static FString GetContentBrowserPathRaw();
+		static void LoadMaterial(FXmlFile *matXml, const FString &path, Assignment* matAssign);
 
 	private:
 
@@ -50,19 +47,13 @@ namespace ModoMaterial
 			bool isSRGB; 
 		};
 
-		static void ProcessTextureInfo(const TArray<FXmlNode* >& materialNodes);
-		static void ProcessMaterial(FXmlNode *matNode, const FString& contentPath, Assignment* matAssign);
-
 		static void FindTextureNodes(const FXmlNode *Node, TArray<TextureInfo>& txtrInfos);
 		static bool AddFloatParam(FXmlNode *Node, UMaterial* mat, FMaterialInput<float>& matInput, int &graphOffset);
 		static bool AddVectorParam(FXmlNode *Node, UMaterial* mat, FMaterialInput<FVector>& matInput, int &graphOffset, EMaterialSamplerType type);
 		static bool AddColorParam(FXmlNode *Node, UMaterial* mat, FMaterialInput<FColor>& matInput, int &graphOffset);
 		static void AddUnkownParam(FXmlNode *Node, UMaterial* mat, int &graphOffset);
 
-		static FString _path, _rootPath, _contentBrowserPath;
+		static FString _path, _rootPath;
 		static TArray< ImageInfo> _imageInfo;
-		static bool _usePtagMaterialName;
-		static UContentBrowserPathTracker *_cbPathTracker;
-		static TArray<FString> _selectedMaterials;
 	};
 }

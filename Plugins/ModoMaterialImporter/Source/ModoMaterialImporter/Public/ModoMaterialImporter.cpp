@@ -26,8 +26,6 @@
 #include "ModoMaterialImporterMaterialCreator.h"
 #include "ModoMaterialImporterAssignment.h"
 
-#include "ContentBrowserModule.h"
-
 IMPLEMENT_MODULE(ModoMaterialImporterModule, ModoMaterialImporter)
 
 void ModoMaterialImporterModule::StartupModule()
@@ -51,16 +49,6 @@ void ModoMaterialImporterModule::StartupModule()
 	_ExtensionManager = LevelEditorModule.GetToolBarExtensibilityManager();
 
 	mLastPath = FString("\\");
-
-	FContentBrowserModule &ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
-	FContentBrowserModule::FOnAssetPathChanged& PathChangedDelegate = ContentBrowserModule.GetOnAssetPathChanged();
-	PathChangedDelegate.AddRaw(this, &ModoMaterialImporterModule::OnAssetPathChanged);
-}
-
-void ModoMaterialImporterModule::OnAssetPathChanged(const FString& newPath)
-{
-	mContentBrowserPath = newPath;
-	ModoMaterial::MaterialCreator::SetContentBrowserPathRaw(newPath);
 }
 
 void ModoMaterialImporterModule::ShutdownModule()
@@ -115,7 +103,7 @@ void ModoMaterialImporterModule::ButtonClicked()
 		{
 			ModoMaterial::Assignment matAssignment;
 			ModoMaterial::MaterialCreator::LoadMaterial(matXml, path, &matAssignment);
-			matAssignment.ApplyToMeshes(ModoMaterial::MaterialCreator::GetContentBrowserPathRaw());
+			matAssignment.ApplyToMeshes();
 		}
 
 		delete matXml;

@@ -24,6 +24,6 @@ public class ModoMaterialImporter : ModuleRules
         PrivateIncludePaths.AddRange(new string[] { "ModoMaterialImporter/Private" });
         PublicIncludePaths.AddRange(new string[] { "ModoMaterialImporter/Public" });
 
-        PublicDependencyModuleNames.AddRange(new string[] { "Engine", "Core", "LevelEditor", "Slate", "SlateCore", "EditorStyle", "XmlParser", "ImageWrapper", "CoreUObject", "UnrealEd", "MaterialEditor", "DesktopPlatform", "Projects", "InputCore", "ContentBrowser"});
+        PublicDependencyModuleNames.AddRange(new string[] { "Engine", "Core", "LevelEditor", "Slate", "SlateCore", "EditorStyle", "XmlParser", "ImageWrapper", "CoreUObject", "UnrealEd", "MaterialEditor", "DesktopPlatform", "Projects", "InputCore"});
     }
 }
