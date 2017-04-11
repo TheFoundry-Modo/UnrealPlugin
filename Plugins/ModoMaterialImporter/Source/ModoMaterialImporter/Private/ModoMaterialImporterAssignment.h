@@ -28,10 +28,12 @@ namespace ModoMaterial
 	{
 	public:
 		void AddMaterial(UMaterial* mat, const FString& name);
-		void ApplyToMeshes();
+		void ApplyToMeshes(const FString &path);
+		void UpdateMaterialFlags(const FString &path);
+		UMaterial* GetMaterial();
 
 	private:
-
+		void UpdateMaterialFlags(const TArray<FAssetData> &MeshAssetList);
 		std::map<std::string, UMaterial*> Materials;
 	};
 }

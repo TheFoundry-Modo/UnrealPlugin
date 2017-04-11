@@ -13,17 +13,21 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
- 
-#include "ModoMaterialImporterPrivatePCH.h"
-#include "ModoMaterialImporterCommands.h"
 
-#define LOCTEXT_NAMESPACE "ModoMaterialImporter"
- 
-PRAGMA_DISABLE_OPTIMIZATION
-void ModoMaterialImporterCommands::RegisterCommands()
+#pragma once
+
+#include "UnrealEd.h"
+#include "ModoMaterialImporterContentPathTracker.generated.h"
+
+UCLASS(hideCategories = Object)
+class UContentBrowserPathTracker : public UObject
 {
-	UI_COMMAND(Button, "ModoMaterialImporter", "Import a modo material description file (XML)", EUserInterfaceActionType::Button, FInputGesture());
-}
-PRAGMA_ENABLE_OPTIMIZATION
+	GENERATED_UCLASS_BODY()
 
-#undef LOCTEXT_NAMESPACE
+public:
+	void OnAssetPathChanged(const FString& newPath);
+	FString GetPath();
+
+private:
+	FString _path;
+};

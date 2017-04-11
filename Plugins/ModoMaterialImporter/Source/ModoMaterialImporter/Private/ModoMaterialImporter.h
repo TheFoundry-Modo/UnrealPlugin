@@ -37,12 +37,14 @@ public:
 	virtual void ShutdownModule() override;
 
 	void ButtonClicked();
+	void OnAssetPathChanged(const FString& newPath);
 	
 private:
 
 	void AddToolbarExtension(FToolBarBuilder &);
 
-	FString  mLastPath;
+	FString	 mLastPath;
+	FString	 mContentBrowserPath;
 
 	TSharedPtr< const FExtensionBase > _ToolbarExtension;
 	TSharedPtr<FExtensibilityManager> _ExtensionManager;

@@ -20,6 +20,7 @@
 
 #include "EngineUtils.h"
 #include "AssetRegistryModule.h"
+#include "Editor.h"
 
 #include "Animation/SkeletalMeshActor.h"
 
@@ -39,57 +40,123 @@ void Assignment::AddMaterial(UMaterial* mat, const FString& name)
 	}
 }
 
-void Assignment::ApplyToMeshes()
+UMaterial* Assignment::GetMaterial()
 {
-	UClass *refMeshClass= AStaticMeshActor::StaticClass();
-	UClass *refSkeletaMeshClass = ASkeletalMeshActor::StaticClass();
+	if (Materials.begin() != Materials.end())
+		return Materials.begin()->second;
+	else
+		return NULL;
+}
 
-	for (TObjectIterator<UObject> Itr; Itr; ++Itr)
+void Assignment::UpdateMaterialFlags(const FString &path)
+{
+	UClass *refMeshClass = UStaticMesh::StaticClass();
+	UClass *refSkeletaMeshClass = USkeletalMesh::StaticClass();
+	FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(FName("AssetRegistry"));
+	IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
+
+	TArray<FString> PathsToScan;
+	PathsToScan.Add(path);
+	AssetRegistry.ScanPathsSynchronous(PathsToScan);
+
+	TArray<FAssetData> MeshAssetList;
+	AssetRegistry.GetAssetsByPath(FName(*path), MeshAssetList);
+
+	UpdateMaterialFlags (MeshAssetList);
+}
+
+void Assignment::UpdateMaterialFlags(const TArray<FAssetData> &MeshAssetList)
+{
+	UClass *refMeshClass = UStaticMesh::StaticClass();
+	UClass *refSkeletaMeshClass = USkeletalMesh::StaticClass();
+
+	UE_LOG(ModoMaterialImporter, Log, TEXT("Update Material Flag according to usage"));
+
+	for (int j = 0; j < MeshAssetList.Num(); j++)
 	{
-		if (Itr->GetClass()->IsChildOf(refMeshClass))
+		UObject* asset = MeshAssetList[j].GetAsset();
+
+		if (asset == NULL)
+			continue;
+
+		if (asset->GetClass() == refMeshClass)
 		{
-			UE_LOG(ModoMaterialImporter, Log, TEXT("Scan materials in: %s %s"), *Itr->GetName(), *Itr->GetClass()->GetDesc());
+			UStaticMesh* staticMesh = dynamic_cast<UStaticMesh*> (asset);
 
-			AStaticMeshActor *aMeshActor = dynamic_cast<AStaticMeshActor*> (*Itr);
-
-			if (aMeshActor != NULL)
+			if (staticMesh != NULL)
 			{
-				UMeshComponent* meshCompo = aMeshActor->GetStaticMeshComponent();
-
-				if (meshCompo != NULL)
+				for (int i = 0; i < staticMesh->StaticMaterials.Num(); i++)
 				{
-					for (int i = 0; i < meshCompo->GetNumMaterials(); i++)
-					{
-						UMaterialInterface* material = meshCompo->GetMaterial(i);
+					UMaterial* material = staticMesh->StaticMaterials[i].MaterialInterface->GetMaterial();
 
-						// It seems a UE4 bug, GetNumMaterials contains NULL materials!
-						if (material == NULL)
-							continue;
+					if (material == NULL)
+						continue;
 
-						std::string strName = (TCHAR_TO_UTF8(*material->GetName()));
-
-						std::map<std::string, UMaterial*>::iterator mat_itr = Materials.find(strName);
-						if (mat_itr != Materials.end())
-						{
-							UE_LOG(ModoMaterialImporter, Log, TEXT("Set Material: %s"), *material->GetName());
-							meshCompo->SetMaterial(i, mat_itr->second);
-						}
-					}
+					material->bUsedWithSkeletalMesh = false;
 				}
 			}
 		}
-		else if (Itr->GetClass()->IsChildOf(refSkeletaMeshClass))
+	}
+
+	for (int j = 0; j < MeshAssetList.Num(); j++)
+	{
+		UObject* asset = MeshAssetList[j].GetAsset();
+
+		if (asset == NULL)
+			continue;
+
+		if (asset->GetClass() == refSkeletaMeshClass)
 		{
-			UE_LOG(ModoMaterialImporter, Log, TEXT("Scan materials in: %s %s"), *Itr->GetName(), *Itr->GetClass()->GetDesc());
+			USkeletalMesh* skeletalMesh = dynamic_cast<USkeletalMesh*> (asset);
 
-			ASkeletalMeshActor *aMeshActor = dynamic_cast<ASkeletalMeshActor*> (*Itr);
-
-			if (aMeshActor != NULL)
+			if (skeletalMesh != NULL)
 			{
-				UMeshComponent * meshCompo = aMeshActor->GetSkeletalMeshComponent();
-				for (int i = 0; i < meshCompo->GetNumMaterials(); i++)
+				for (int i = 0; i < skeletalMesh->Materials.Num(); i++)
 				{
-					UMaterialInterface* material = meshCompo->GetMaterial(i);
+					UMaterial* material = skeletalMesh->Materials[i].MaterialInterface->GetMaterial();
+
+					if (material == NULL)
+						continue;
+
+					material->bUsedWithSkeletalMesh = true;
+				}
+			}
+		}
+	}
+}
+
+void Assignment::ApplyToMeshes(const FString &path)
+{
+	UClass *refMeshClass = UStaticMesh::StaticClass();
+	UClass *refSkeletaMeshClass = USkeletalMesh::StaticClass();
+	FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(FName("AssetRegistry"));
+	IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
+
+	TArray<FString> PathsToScan;
+	PathsToScan.Add(path);
+	AssetRegistry.ScanPathsSynchronous(PathsToScan);
+
+	TArray<FAssetData> MeshAssetList;
+	AssetRegistry.GetAssetsByPath(FName(*path), MeshAssetList);
+
+	for (int j = 0; j < MeshAssetList.Num(); j++)
+	{
+		UObject* asset = MeshAssetList[j].GetAsset();
+
+		if (asset == NULL)
+			continue;
+
+		if (asset->GetClass() == refMeshClass)
+		{
+			UE_LOG(ModoMaterialImporter, Log, TEXT("Scan materials in: %s %s"), *asset->GetName(), *asset->GetClass()->GetDesc());
+
+			UStaticMesh* staticMesh = dynamic_cast<UStaticMesh*> (asset);
+
+			if (staticMesh != NULL)
+			{
+				for (int i = 0; i < staticMesh->StaticMaterials.Num(); i++)
+				{
+					UMaterialInterface* material = staticMesh->StaticMaterials[i].MaterialInterface;
 
 					// It seems a UE4 bug, GetNumMaterials contains NULL materials!
 					if (material == NULL)
@@ -101,10 +168,40 @@ void Assignment::ApplyToMeshes()
 					if (mat_itr != Materials.end())
 					{
 						UE_LOG(ModoMaterialImporter, Log, TEXT("Set Material: %s"), *material->GetName());
-						meshCompo->SetMaterial(i, mat_itr->second);
+						staticMesh->StaticMaterials[i].MaterialInterface =  mat_itr->second;
+					}
+				}
+			}
+
+		}
+		else if (asset->GetClass() == refSkeletaMeshClass)
+		{
+			UE_LOG(ModoMaterialImporter, Log, TEXT("Scan materials in: %s %s"), *asset->GetName(), *asset->GetClass()->GetDesc());
+
+			USkeletalMesh* skeletalMesh = dynamic_cast<USkeletalMesh*> (asset);
+
+			if (skeletalMesh != NULL)
+			{
+				for (int i = 0; i < skeletalMesh->Materials.Num(); i++)
+				{
+					UMaterialInterface* material = skeletalMesh->Materials[i].MaterialInterface;
+
+					// It seems a UE4 bug, GetNumMaterials contains NULL materials!
+					if (material == NULL)
+						continue;
+
+					std::string strName = (TCHAR_TO_UTF8(*material->GetName()));
+
+					std::map<std::string, UMaterial*>::iterator mat_itr = Materials.find(strName);
+					if (mat_itr != Materials.end())
+					{
+						UE_LOG(ModoMaterialImporter, Log, TEXT("Set Material: %s"), *material->GetName());
+						skeletalMesh->Materials[i].MaterialInterface = mat_itr->second;
 					}
 				}
 			}
 		}
 	}
+
+	UpdateMaterialFlags (MeshAssetList);
 }
