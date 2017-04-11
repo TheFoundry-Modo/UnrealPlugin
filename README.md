@@ -1,7 +1,7 @@
-# Modo Material Importer 2.0 Alpha for Unreal Engine 4.14
+# Modo Material Importer for Unreal Engine 4.15.1
   The Unreal Material Importer is a plug-in for Unreal Engine 4 that you can use to load Modo material .xml files and apply them to 3D meshes of a game level in the Unreal Engine 4 editor.
   
- Master is usually under heavy development. Binaries and source code on the master are for Unreal 4.14.0<br />
+ Master is usually under heavy development. Binaries and source code on the master are for Unreal 4.15.1<br />
  
  Current Release that is identical to the one on UE4 Marketplace is here:<br />
  https://github.com/TheFoundry-Modo/UnrealPlugin/tree/UE4_15_0
