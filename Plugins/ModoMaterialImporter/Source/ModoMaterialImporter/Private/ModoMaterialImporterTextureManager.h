@@ -20,6 +20,7 @@
 
 #include "SlateBasics.h"
 #include "SlateExtras.h"
+#include "Factories/TextureFactory.h"
 
 namespace ModoMaterial
 {
