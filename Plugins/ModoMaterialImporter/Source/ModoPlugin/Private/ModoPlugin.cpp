@@ -14,7 +14,6 @@
  *   limitations under the License.
  */
  
-#include "ModoPluginPCH.h"
 #include "ModoPlugin.h"
 
 #define LOCTEXT_NAMESPACE "ModoPlugin"

@@ -25,7 +25,8 @@ class IModoPlugin : public IModuleInterface
 
 public:
 	// Dummy runtime plugin for resolving package issues in blueprint projects
-	static inline bool dummy () {
+	static inline bool dummy ()
+	{
 		return true;
 	}
 };

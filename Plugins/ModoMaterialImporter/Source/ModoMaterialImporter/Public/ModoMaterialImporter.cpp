@@ -13,20 +13,17 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
- 
-#include "ModoMaterialImporterPrivatePCH.h"
- 
+  
 #include "ModoMaterialImporter.h"
 #include "DesktopPlatformModule.h"
 #include "MaterialEditorModule.h"
+#include "ContentBrowserModule.h"
 #include "InputCoreTypes.h"
 
 #include "ModoMaterialImporterLog.h"
 #include "ModoMaterialImporterStyle.h"
 #include "ModoMaterialImporterMaterialCreator.h"
 #include "ModoMaterialImporterAssignment.h"
-
-#include "ContentBrowserModule.h"
 
 IMPLEMENT_MODULE(ModoMaterialImporterModule, ModoMaterialImporter)
 
@@ -102,7 +99,9 @@ void ModoMaterialImporterModule::ButtonClicked()
 		{
 
 			if (OutFilenames[0][ilastslash] == TCHAR('/'))
+			{
 				break;
+			}
 		}
 
 		FString path = OutFilenames[0].Left(ilastslash + 1);

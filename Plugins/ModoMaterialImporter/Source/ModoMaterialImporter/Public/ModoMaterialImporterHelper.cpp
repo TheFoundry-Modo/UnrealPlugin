@@ -14,11 +14,10 @@
  *   limitations under the License.
  */
  
-#include "ModoMaterialImporterPrivatePCH.h"
 #include "ModoMaterialImporterHelper.h"
-#include "ModoMaterialImporterLog.h"
-
 #include "PackageName.h"
+
+#include "ModoMaterialImporterLog.h"
 
 using namespace ModoMaterial;
 
@@ -34,7 +33,9 @@ bool CommonHelper::GetValidePackageName(FString& PackageName)
 		for (int i = 0; i < PackageName.Len(); i++)
 		{
 			if (PackageName[i] == ' ')
+			{
 				PackageName[i] = '_';
+			}
 		}
 
 		if (!FPackageName::IsValidLongPackageName(PackageName, false, &outReason))
@@ -61,18 +62,24 @@ bool CommonHelper::RemoveInvalidCharacters(FString& name)
 
 	for (int i = 0; i < name.Len(); i++)
 	{
-		if (isalnum(name[i]) || name[i] == '_' || name[i] == '-') {
+		if (isalnum(name[i]) || name[i] == '_' || name[i] == '-')
+		{
 			validName.AppendChar(name[i]);
 		}
-		else {
+		else
+		{
 			if (name[i] == ' ')
+			{
 				validName.AppendChar('_');
+			}
 			bChanged = true;
 		}
 	}
 
 	if (bChanged)
+	{
 		name = validName;
+	}
 
 	return bChanged;
 }
@@ -96,7 +103,9 @@ bool CommonHelper::CorrectInvalidPath(FString& name)
 	}
 
 	if (bChanged)
+	{
 		name = validName;
+	}
 
 	return bChanged;
 }

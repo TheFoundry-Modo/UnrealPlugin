@@ -16,14 +16,19 @@
  
 using UnrealBuildTool;
 using System.IO;
- 
-public class ModoPlugin : ModuleRules
-{
-    public ModoPlugin(TargetInfo Target)
-    {
-        PrivateIncludePaths.Add("ModoPlugin/Private");
-        PublicIncludePaths.Add("ModoPlugin/Public");
 
-        PublicDependencyModuleNames.AddRange(new string[] { "Engine", "Core"});
+namespace UnrealBuildTool.Rules
+{
+    public class ModoPlugin : ModuleRules
+    {
+        public ModoPlugin(ReadOnlyTargetRules Target) : base(Target)
+        {
+            PrivateIncludePaths.Add("ModoPlugin/Private");
+            PublicIncludePaths.Add("ModoPlugin/Public");
+
+            // Workaround for inconsistency of PCH rules between Engine Plugin and Project Plugin
+            PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+            PublicDependencyModuleNames.AddRange(new string[] { "Engine", "Core" });
+        }
     }
 }

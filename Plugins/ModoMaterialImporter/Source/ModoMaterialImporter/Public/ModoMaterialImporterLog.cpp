@@ -14,7 +14,6 @@
 *   limitations under the License.
 */
 
-#include "ModoMaterialImporterPrivatePCH.h"
 #include "ModoMaterialImporterLog.h"
 
 DEFINE_LOG_CATEGORY(ModoMaterialImporter);

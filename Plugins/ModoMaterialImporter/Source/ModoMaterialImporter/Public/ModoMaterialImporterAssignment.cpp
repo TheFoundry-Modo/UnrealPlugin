@@ -13,8 +13,7 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
- 
-#include "ModoMaterialImporterPrivatePCH.h"
+
 #include "ModoMaterialImporterAssignment.h"
 #include "ModoMaterialImporterLog.h"
 
@@ -43,9 +42,13 @@ void Assignment::AddMaterial(UMaterial* mat, const FString& name)
 UMaterial* Assignment::GetMaterial()
 {
 	if (Materials.begin() != Materials.end())
+	{
 		return Materials.begin()->second;
+	}
 	else
+	{
 		return NULL;
+	}
 }
 
 void Assignment::UpdateMaterialFlags(const FString &path)
@@ -77,7 +80,9 @@ void Assignment::UpdateMaterialFlags(const TArray<FAssetData> &MeshAssetList)
 		UObject* asset = MeshAssetList[j].GetAsset();
 
 		if (asset == NULL)
+		{
 			continue;
+		}
 
 		if (asset->GetClass() == refMeshClass)
 		{
@@ -90,7 +95,9 @@ void Assignment::UpdateMaterialFlags(const TArray<FAssetData> &MeshAssetList)
 					UMaterial* material = staticMesh->StaticMaterials[i].MaterialInterface->GetMaterial();
 
 					if (material == NULL)
+					{
 						continue;
+					}
 
 					material->bUsedWithSkeletalMesh = false;
 				}
@@ -103,7 +110,9 @@ void Assignment::UpdateMaterialFlags(const TArray<FAssetData> &MeshAssetList)
 		UObject* asset = MeshAssetList[j].GetAsset();
 
 		if (asset == NULL)
+		{
 			continue;
+		}
 
 		if (asset->GetClass() == refSkeletaMeshClass)
 		{
@@ -116,7 +125,9 @@ void Assignment::UpdateMaterialFlags(const TArray<FAssetData> &MeshAssetList)
 					UMaterial* material = skeletalMesh->Materials[i].MaterialInterface->GetMaterial();
 
 					if (material == NULL)
+					{
 						continue;
+					}
 
 					material->bUsedWithSkeletalMesh = true;
 				}
@@ -144,7 +155,9 @@ void Assignment::ApplyToMeshes(const FString &path)
 		UObject* asset = MeshAssetList[j].GetAsset();
 
 		if (asset == NULL)
+		{
 			continue;
+		}
 
 		if (asset->GetClass() == refMeshClass)
 		{
@@ -160,7 +173,9 @@ void Assignment::ApplyToMeshes(const FString &path)
 
 					// It seems a UE4 bug, GetNumMaterials contains NULL materials!
 					if (material == NULL)
+					{
 						continue;
+					}
 
 					std::string strName = (TCHAR_TO_UTF8(*material->GetName()));
 
@@ -188,7 +203,9 @@ void Assignment::ApplyToMeshes(const FString &path)
 
 					// It seems a UE4 bug, GetNumMaterials contains NULL materials!
 					if (material == NULL)
+					{
 						continue;
+					}
 
 					std::string strName = (TCHAR_TO_UTF8(*material->GetName()));
 

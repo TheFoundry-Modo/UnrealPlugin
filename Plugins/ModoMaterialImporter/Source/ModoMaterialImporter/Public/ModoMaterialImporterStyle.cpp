@@ -14,12 +14,12 @@
  *   limitations under the License.
  */
 
-#include "ModoMaterialImporterPrivatePCH.h"
 #include "ModoMaterialImporterStyle.h"
-#include "ModoMaterialImporterLog.h"
 #include "SlateStyle.h"
 #include "IPluginManager.h"
 #include "EditorStyleSet.h"
+
+#include "ModoMaterialImporterLog.h"
 
 #define IMAGE_BRUSH( RelativePath, ... ) FSlateImageBrush( ModoMaterialImporterStyle::InContent( RelativePath, ".png" ), __VA_ARGS__ )
 
@@ -38,7 +38,7 @@ void ModoMaterialImporterStyle::Initialize()
 	const FVector2D Icon40x40(40.0f, 40.0f);
 
 	// Only register once
-	if( StyleSet.IsValid() )
+	if ( StyleSet.IsValid())
 	{
 		return;
 	}
@@ -58,7 +58,7 @@ void ModoMaterialImporterStyle::Initialize()
 
 void ModoMaterialImporterStyle::Shutdown()
 {
-	if( StyleSet.IsValid() )
+	if (StyleSet.IsValid())
 	{
 		FSlateStyleRegistry::UnRegisterSlateStyle( *StyleSet.Get() );
 		ensure( StyleSet.IsUnique() );

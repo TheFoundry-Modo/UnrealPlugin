@@ -13,8 +13,7 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
- 
-#include "ModoMaterialImporterPrivatePCH.h"
+
 #include "ModoMaterialImporterCommands.h"
 
 #define LOCTEXT_NAMESPACE "ModoMaterialImporter"

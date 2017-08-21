@@ -13,10 +13,11 @@
 *   See the License for the specific language governing permissions and
 *   limitations under the License.
 */
-#include "ModoMaterialImporterPrivatePCH.h"
+
 #include "ModoMaterialImporterImportFactory.h"
-#include "ModoMaterialImporterMaterialCreator.h"
 #include "AssetRegistryModule.h"
+
+#include "ModoMaterialImporterMaterialCreator.h"
 
 //////////////////////////////////////////////////////////////////////////
 // UPaperSpriteSheetImportFactory
@@ -81,7 +82,9 @@ UObject* UModoMaterialImporterImportFactory::FactoryCreateFile(UClass* InClass, 
 	for (ilastslash = filename.Len() - 1; ilastslash >= 0; --ilastslash)
 	{
 		if (filename[ilastslash] == TCHAR('/'))
+		{
 			break;
+		}
 	}
 
 	FString path = filename.Left(ilastslash + 1);

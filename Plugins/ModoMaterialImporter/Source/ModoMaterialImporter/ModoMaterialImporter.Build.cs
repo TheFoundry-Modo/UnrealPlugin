@@ -16,14 +16,19 @@
  
 using UnrealBuildTool;
 using System.IO;
- 
-public class ModoMaterialImporter : ModuleRules
-{
-    public ModoMaterialImporter(TargetInfo Target)
-    {
-        PrivateIncludePaths.AddRange(new string[] { "ModoMaterialImporter/Private" });
-        PublicIncludePaths.AddRange(new string[] { "ModoMaterialImporter/Public" });
 
-        PublicDependencyModuleNames.AddRange(new string[] { "Engine", "Core", "LevelEditor", "Slate", "SlateCore", "EditorStyle", "XmlParser", "ImageWrapper", "CoreUObject", "UnrealEd", "MaterialEditor", "DesktopPlatform", "Projects", "InputCore", "ContentBrowser"});
+namespace UnrealBuildTool.Rules
+{
+    public class ModoMaterialImporter : ModuleRules
+    {
+        public ModoMaterialImporter(ReadOnlyTargetRules Target) : base(Target)
+        {
+            PrivateIncludePaths.AddRange(new string[] { "ModoMaterialImporter/Private" });
+            PublicIncludePaths.AddRange(new string[] { "ModoMaterialImporter/Public" });
+
+            // Workaround for inconsistency of PCH rules between Engine Plugin and Project Plugin
+            PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+            PublicDependencyModuleNames.AddRange(new string[] { "Engine", "Core", "LevelEditor", "Slate", "SlateCore", "EditorStyle", "XmlParser", "ImageWrapper", "CoreUObject", "UnrealEd", "MaterialEditor", "DesktopPlatform", "Projects", "InputCore", "ContentBrowser" });
+        }
     }
 }

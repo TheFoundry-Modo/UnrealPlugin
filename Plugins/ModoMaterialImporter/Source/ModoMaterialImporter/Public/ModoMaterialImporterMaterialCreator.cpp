@@ -14,12 +14,7 @@
  *   limitations under the License.
  */
 
-#include "ModoMaterialImporterPrivatePCH.h"
 #include "ModoMaterialImporterMaterialCreator.h"
-#include "ModoMaterialImporterHelper.h"
-#include "ModoMaterialImporterAssignment.h"
-#include "ModoMaterialImporterLog.h"
-
 #include "IMaterialEditor.h"
 #include "Materials/MaterialExpressionTextureSample.h"
 #include "Materials/MaterialExpressionTextureCoordinate.h"
@@ -27,11 +22,12 @@
 #include "Materials/MaterialExpressionConstant3Vector.h"
 #include "Materials/MaterialExpressionConstant2Vector.h"
 #include "Materials/MaterialExpressionConstant.h"
-
 #include "ContentBrowserModule.h"
 #include "AssetRegistryModule.h"
 
-//#define UNKNOWN_CONSTANT_NODES
+#include "ModoMaterialImporterHelper.h"
+#include "ModoMaterialImporterAssignment.h"
+#include "ModoMaterialImporterLog.h"
 
 using namespace ModoMaterial;
 
@@ -78,7 +74,9 @@ bool isTextureFileName(const FString &content)
 void getDigitalNumber(const FString &source, FString *left, FString *right)
 {
 	if (source.Contains(TEXT(",")))
+	{
 		source.Split(source, left, right, ESearchCase::CaseSensitive, ESearchDir::FromStart);
+	}
 
 	if (left->Contains(TEXT(",")))
 	{
@@ -133,16 +131,24 @@ FVector4 processDigitalNumbers(const FString &content)
 int channelOutputIndex(const FString& swizzling)
 {
 	if (swizzling == "Red" || swizzling == "R" || swizzling == "r")
+	{
 		return 1;
+	}
 
 	if (swizzling == "Green" || swizzling == "G" || swizzling == "g")
+	{
 		return 2;
+	}
 
 	if (swizzling == "Blue" || swizzling == "B" || swizzling == "b")
+	{
 		return 3;
+	}
 
 	if (swizzling == "Alpha" || swizzling == "A" || swizzling == "a")
+	{
 		return 4;
+	}
 
 	return 0;
 }
@@ -197,7 +203,8 @@ void LinkConstant(UMaterial* mat, const vector<float>& value, FMaterialInput<T>*
 		TArray<FExpressionOutput> Outputs;
 		Outputs = Expression->GetOutputs();
 		FExpressionOutput* Output = Outputs.GetData();
-		if (matInput) {
+		if (matInput)
+		{
 			matInput->Expression = Expression;
 			matInput->Mask = Output->Mask;
 			matInput->MaskR = Output->MaskR;
@@ -311,7 +318,9 @@ void LinkTexture(
 		}
 
 		if (matInput != NULL)
+		{
 			matInput->Connect(outIndex, Expression);
+		}
 
 		mat->PostEditChange();
 	}
@@ -333,7 +342,8 @@ UMaterial* CreateMaterial(const FString packageName, FString materialName)
 	for (i = 0; i < LoopNum; i++)
 	{
 		UPackage* existingPackage = FindPackage(NULL, *newPackageName);
-		if (existingPackage) {
+		if (existingPackage)
+		{
 			UObject* Obj = FindObject<UObject>(existingPackage, *materialName);
 
 			if (Obj && !Obj->GetClass()->IsChildOf(UMaterial::StaticClass()))
@@ -352,7 +362,8 @@ UMaterial* CreateMaterial(const FString packageName, FString materialName)
 		}
 	}
 
-	if (i == LoopNum) {
+	if (i == LoopNum)
+	{
 		UE_LOG(ModoMaterialImporter, Log, TEXT("Creating package abort"));
 		return NULL;
 	}
@@ -409,9 +420,13 @@ void MaterialCreator::ProcessTextureInfo(const TArray< FXmlNode * >& matNodes)
 					UE_LOG(ModoMaterialImporter, Log, TEXT("Load image properties: %s [%s]"), *imageInfo.filename, *imageCC);
 
 					if (imageCC.Equals(TEXT("linear"), ESearchCase::IgnoreCase))
+					{
 						imageInfo.colorSpace = ColorSpace::Linear;
+					}
 					else
+					{
 						imageInfo.colorSpace = ColorSpace::sRGB;
+					}
 
 					_imageInfo.Add(imageInfo);
 				}
@@ -460,27 +475,49 @@ void MaterialCreator::ProcessMaterial(FXmlNode *matNode, const FString& contentP
 			UE_LOG(ModoMaterialImporter, Log, TEXT("Load property %s"), *propertyName);
 
 			if (propertyName.Equals(TEXT("Base Color"), ESearchCase::IgnoreCase) || propertyName.Equals(TEXT("Unreal Base Color"), ESearchCase::IgnoreCase))
+			{
 				baseColorNode = propertyNode;
+			}
 			else if (propertyName.Equals(TEXT("Metallic"), ESearchCase::IgnoreCase) || propertyName.Equals(TEXT("Unreal Metallic"), ESearchCase::IgnoreCase))
+			{
 				metallicNode = propertyNode;
+			}
 			else if (propertyName.Equals(TEXT("Opacity"), ESearchCase::IgnoreCase) || propertyName.Equals(TEXT("Unreal Opacity"), ESearchCase::IgnoreCase))
+			{
 				opacityNode = propertyNode;
+			}
 			else if (propertyName.Equals(TEXT("Emissive Color"), ESearchCase::IgnoreCase) || propertyName.Equals(TEXT("Unreal Emissive Color"), ESearchCase::IgnoreCase))
+			{
 				emissiveColorNode = propertyNode;
+			}
 			else if (propertyName.Equals(TEXT("Specular"), ESearchCase::IgnoreCase) || propertyName.Equals(TEXT("Unreal Specular"), ESearchCase::IgnoreCase))
+			{
 				specularNode = propertyNode;
+			}
 			else if (propertyName.Equals(TEXT("Normal"), ESearchCase::IgnoreCase) || propertyName.Equals(TEXT("Unreal Normal"), ESearchCase::IgnoreCase))
+			{
 				normalNode = propertyNode;
+			}
 			else if (propertyName.Equals(TEXT("Roughness"), ESearchCase::IgnoreCase) || propertyName.Equals(TEXT("Unreal Roughness"), ESearchCase::IgnoreCase))
+			{
 				roughnessNode = propertyNode;
+			}
 			else if (propertyName.Equals(TEXT("Clearcoat Amount"), ESearchCase::IgnoreCase) || propertyName.Equals(TEXT("Unreal Clearcoat Amount"), ESearchCase::IgnoreCase))
+			{
 				clearcoatNode = propertyNode;
+			}
 			else if (propertyName.Equals(TEXT("Clearcoat Roughness"), ESearchCase::IgnoreCase) || propertyName.Equals(TEXT("Unreal Clearcoat Roughness"), ESearchCase::IgnoreCase))
+			{
 				clearcoatRoughNode = propertyNode;
+			}
 			else if (propertyName.Equals(TEXT("Ambient Occlusion"), ESearchCase::IgnoreCase) || propertyName.Equals(TEXT("Unreal Ambient Occlusion"), ESearchCase::IgnoreCase))
+			{
 				ambientOcclusionNode = propertyNode;
+			}
 			else if (propertyName.Equals(TEXT("Subsurface Color"), ESearchCase::IgnoreCase) || propertyName.Equals(TEXT("UNreal Subsurface Color"), ESearchCase::IgnoreCase))
+			{
 				subsurfaceColorNode = propertyNode;
+			}
 			else
 			{
 				unkownNodes.Add(propertyNode);
@@ -500,9 +537,13 @@ void MaterialCreator::ProcessMaterial(FXmlNode *matNode, const FString& contentP
 	{
 		// Use the ptag for the material name.
 		if (!ptag.IsEmpty())
+		{
 			materialName = ptag;
+		}
 		else
+		{
 			return;
+		}
 
 		// Remove invalid characters and any '_skinXX' suffix from the material name.
 		CommonHelper::RemoveInvalidCharacters(materialName);
@@ -529,7 +570,9 @@ void MaterialCreator::ProcessMaterial(FXmlNode *matNode, const FString& contentP
 
 	// Deal with invalid long name issue
 	if (!CommonHelper::GetValidePackageName(packageName))
+	{
 		return;
+	}
 
 	// update material if any selected materials matches the material name
 	if (_selectedMaterials.Num())
@@ -540,14 +583,19 @@ void MaterialCreator::ProcessMaterial(FXmlNode *matNode, const FString& contentP
 
 			// only update when selected materials are in current package
 			if (packageName == selectedPackageName)
+			{
 				mat = CreateMaterial(packageName, materialName);
+			}
 		}
 	}
-	else // create materials if no materials are selected
+	else
+	{ // create materials if no materials are selected
 		mat = CreateMaterial(packageName, materialName);
+	}
 
 	// early skip if no material could be created/updated
-	if (mat == NULL) {
+	if (mat == NULL)
+	{
 		UE_LOG(ModoMaterialImporter, Log, TEXT("Material %s creation failed"), *materialName);
 		return;
 	}
@@ -589,22 +637,34 @@ void MaterialCreator::ProcessMaterial(FXmlNode *matNode, const FString& contentP
 	useSubsurface = AddColorParam(subsurfaceColorNode, mat, mat->SubsurfaceColor, graphOffset);
 
 	if (useTransparent)
+	{
 		mat->BlendMode = BLEND_Translucent;
+	}
 
 	if (useClearCoat)
+	{
 		mat->SetShadingModel(MSM_ClearCoat);
+	}
 
 	if (useSubsurface)
+	{
 		mat->SetShadingModel(MSM_Subsurface);
+	}
 
 	if (useTransparent || useClearCoat || useSubsurface)
+	{
 		mat->PostEditChange();
+	}
 
 	for (int i = 0; i < unkownNodes.Num(); i++)
+	{
 		AddUnkownParam(unkownNodes[i], mat, graphOffset);
+	}
 
 	if (isNew)
+	{
 		FAssetRegistryModule::AssetCreated(mat);
+	}
 
 	if (mat)
 	{
@@ -631,15 +691,20 @@ bool MaterialCreator::LoadMaterial(FXmlFile *matXml, const FString &path, Assign
 			{
 				FAssetData& Asset = SelectedAssets[i];
 				if (Asset.GetClass() == UMaterial::StaticClass())
+				{
 					_selectedMaterials.Add(Asset.PackageName.ToString());
+				}
 				else if (Asset.GetClass() == UStaticMesh::StaticClass())
 				{
 					UStaticMesh *mesh = dynamic_cast<UStaticMesh*>(Asset.GetAsset());
 
 					if (mesh == NULL)
+					{
 						continue;
+					}
 
-					for (int j = 0; j < mesh->StaticMaterials.Num(); j++) {
+					for (int j = 0; j < mesh->StaticMaterials.Num(); j++)
+					{
 						UMaterial* material = mesh->StaticMaterials[j].MaterialInterface->GetMaterial();
 						FString packageName = FPaths::GetPath(material->GetPathName()) + "/" + material->GetName();
 						_selectedMaterials.Add(packageName);
@@ -650,9 +715,12 @@ bool MaterialCreator::LoadMaterial(FXmlFile *matXml, const FString &path, Assign
 					USkeletalMesh *mesh = dynamic_cast<USkeletalMesh*>(Asset.GetAsset());
 
 					if (mesh == NULL)
+					{
 						continue;
+					}
 
-					for (int j = 0; j < mesh->Materials.Num(); j++) {
+					for (int j = 0; j < mesh->Materials.Num(); j++)
+					{
 						UMaterial* material = mesh->Materials[j].MaterialInterface->GetMaterial();
 						FString packageName = FPaths::GetPath(material->GetPathName()) + "/" + material->GetName();
 						_selectedMaterials.Add(packageName);
@@ -686,7 +754,9 @@ bool MaterialCreator::LoadMaterial(FXmlFile *matXml, const FString &path, Assign
 					int32 versionNum = FCString::Atoi(*Content);
 
 					if (versionNum > MODO_VER)
+					{
 						UE_LOG(ModoMaterialImporter, Log, TEXT("WARNING: The importer is out of date (The XML file is exported from a higher version of MODO)."));
+					}
 				}
 			}
 			else if (tag.Equals(TEXT("PtagAsID"), ESearchCase::CaseSensitive))
@@ -694,7 +764,9 @@ bool MaterialCreator::LoadMaterial(FXmlFile *matXml, const FString &path, Assign
 				FString Content = matNode->GetContent();
 
 				if (!Content.IsEmpty())
+				{
 					_usePtagMaterialName = Content.ToBool();
+				}
 			}
 			else if (tag.Equals(TEXT("ImageFiles"), ESearchCase::CaseSensitive))
 			{
@@ -732,7 +804,8 @@ bool MaterialCreator::LoadMaterial(FXmlFile *matXml, const FString &path, Assign
 void MaterialCreator::FindTextureNodes(const FXmlNode *Node, TArray<TextureInfo>& txtrInfos)
 {
 	FString content = Node->GetAttribute("texture");
-	if (!content.IsEmpty()) {
+	if (!content.IsEmpty())
+	{
 		TextureInfo txtrInfo;
 		txtrInfo.node = Node;
 		txtrInfo.filename = content;
@@ -791,10 +864,14 @@ bool MaterialCreator::AddFloatParam(FXmlNode *Node, UMaterial* mat, FMaterialInp
 					tiling[0] = tiling[1] = 1.0;
 
 					if (!wrapU.IsEmpty())
+					{
 						tiling[0] = processDigitalNumbers(wrapU)[0];
+					}
 
 					if (!wrapV.IsEmpty())
+					{
 						tiling[1] = processDigitalNumbers(wrapV)[0];
+					}
 
 					FString swizzling = texNode->GetAttribute("channel");
 					int outIndex = channelOutputIndex(swizzling);
@@ -802,7 +879,9 @@ bool MaterialCreator::AddFloatParam(FXmlNode *Node, UMaterial* mat, FMaterialInp
 					int uvChannelIndex = 0;
 					FString uvChannelIndexStr = texNode->GetAttribute("uvindex");
 					if (!wrapV.IsEmpty())
+					{
 						uvChannelIndex = FCString::Atoi(*uvChannelIndexStr);
+					}
 
 					FAssetRegistryModule::AssetCreated(tex);
 
@@ -821,7 +900,9 @@ bool MaterialCreator::AddFloatParam(FXmlNode *Node, UMaterial* mat, FMaterialInp
 			FVector4 vec = processDigitalNumbers(content);
 
 			if (vec[0] == matInput.Constant)
+			{
 				return false;
+			}
 
 			matInput.Constant = vec[0];
 
@@ -856,7 +937,9 @@ bool MaterialCreator::AddVectorParam(FXmlNode *Node, UMaterial* mat, FMaterialIn
 				TextureCompressionSettings	 texCompSet = TC_Default;
 
 				if (type == SAMPLERTYPE_Normal)
+				{
 					texCompSet = TC_Normalmap;
+				}
 
 				UTexture* tex = texManager->LoadTexture(*content, _path, _rootPath, _contentBrowserPath, isSRGB, texCompSet);
 				if (tex)
@@ -868,10 +951,14 @@ bool MaterialCreator::AddVectorParam(FXmlNode *Node, UMaterial* mat, FMaterialIn
 					tiling[0] = tiling[1] = 1.0;
 
 					if (!wrapU.IsEmpty())
+					{
 						tiling[0] = processDigitalNumbers(wrapU)[0];
+					}
 
 					if (!wrapV.IsEmpty())
+					{
 						tiling[1] = processDigitalNumbers(wrapV)[0];
+					}
 
 					FString swizzling = texNode->GetAttribute("channel");
 					int outIndex = channelOutputIndex(swizzling);
@@ -879,7 +966,9 @@ bool MaterialCreator::AddVectorParam(FXmlNode *Node, UMaterial* mat, FMaterialIn
 					int uvChannelIndex = 0;
 					FString uvChannelIndexStr = texNode->GetAttribute("uvindex");
 					if (!wrapV.IsEmpty())
+					{
 						uvChannelIndex = FCString::Atoi(*uvChannelIndexStr);
+					}
 
 					FAssetRegistryModule::AssetCreated(tex);
 					LinkTexture<FVector>(mat, tex, &matInput, graphOffset, tiling, uvChannelIndex, outIndex, type);
@@ -895,7 +984,9 @@ bool MaterialCreator::AddVectorParam(FXmlNode *Node, UMaterial* mat, FMaterialIn
 			FVector4 vec = processDigitalNumbers(content);
 
 			if (matInput.Constant == FVector(vec[0], vec[1], vec[2]))
+			{
 				return false;
+			}
 
 			matInput.Constant = FVector(vec[0], vec[1], vec[2]);
 
@@ -937,10 +1028,14 @@ bool MaterialCreator::AddColorParam(FXmlNode *Node, UMaterial* mat, FMaterialInp
 					tiling[0] = tiling[1] = 1.0;
 
 					if (!wrapU.IsEmpty())
+					{
 						tiling[0] = processDigitalNumbers(wrapU)[0];
+					}
 
 					if (!wrapV.IsEmpty())
+					{
 						tiling[1] = processDigitalNumbers(wrapV)[0];
+					}
 
 					FString swizzling = texNode->GetAttribute("channel");
 					int outIndex = channelOutputIndex(swizzling);
@@ -948,7 +1043,9 @@ bool MaterialCreator::AddColorParam(FXmlNode *Node, UMaterial* mat, FMaterialInp
 					int uvChannelIndex = 0;
 					FString uvChannelIndexStr = texNode->GetAttribute("uvindex");
 					if (!wrapV.IsEmpty())
+					{
 						uvChannelIndex = FCString::Atoi(*uvChannelIndexStr);
+					}
 
 					FAssetRegistryModule::AssetCreated(tex);
 
@@ -972,7 +1069,9 @@ bool MaterialCreator::AddColorParam(FXmlNode *Node, UMaterial* mat, FMaterialInp
 			uint8 A = FMath::Clamp((int)(vec[3] * 255), 0, 255);
 
 			if (matInput.Constant == FColor(R, G, B, A))
+			{
 				return false;
+			}
 
 			matInput.Constant = FColor(R, G, B, A);
 
@@ -1014,10 +1113,14 @@ void MaterialCreator::AddUnkownParam(FXmlNode *Node, UMaterial* mat, int &graphO
 					tiling[0] = tiling[1] = 1.0;
 
 					if (!wrapU.IsEmpty())
+					{
 						tiling[0] = processDigitalNumbers(wrapU)[0];
+					}
 
 					if (!wrapV.IsEmpty())
+					{
 						tiling[1] = processDigitalNumbers(wrapV)[0];
+					}
 
 					FString swizzling = texNode->GetAttribute("channel");
 					int outIndex = channelOutputIndex(swizzling);
@@ -1025,7 +1128,9 @@ void MaterialCreator::AddUnkownParam(FXmlNode *Node, UMaterial* mat, int &graphO
 					int uvChannelIndex = 0;
 					FString uvChannelIndexStr = texNode->GetAttribute("uvindex");
 					if (!wrapV.IsEmpty())
+					{
 						uvChannelIndex = FCString::Atoi(*uvChannelIndexStr);
+					}
 
 					FAssetRegistryModule::AssetCreated(tex);
 

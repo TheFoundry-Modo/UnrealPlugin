@@ -14,7 +14,6 @@
  *   limitations under the License.
  */
 
-#include "ModoMaterialImporterPrivatePCH.h"
 #include "ModoMaterialImporterTextureManager.h"
 #include "ModoMaterialImporterHelper.h"
 #include "ModoMaterialImporterLog.h"
@@ -27,7 +26,9 @@ TextureManager* TextureManager::Instance()
 {
 	TextureManager *manager = gManager;
 	if (NULL != manager)
+	{
 		return (manager);
+	}
 
 	gManager = new TextureManager;
 
@@ -63,9 +64,13 @@ UTexture* TextureManager::LoadTexture(const FString& TextureFilename, const FStr
 		FString retrievedPath = texturePath.Replace(*rootPath, TEXT(""));
 		CommonHelper::CorrectInvalidPath(retrievedPath);
 		if (FPaths::IsRelative (retrievedPath))
+		{
 			PackageName = contentPath + retrievedPath + BaseName;
+		}
 		else
+		{
 			UE_LOG(ModoMaterialImporter, Log, TEXT("Texture save path retrieving failed: %s"), *retrievedPath);
+		}
 
 	}
 
@@ -73,34 +78,10 @@ UTexture* TextureManager::LoadTexture(const FString& TextureFilename, const FStr
 
 	// Deal with invalid long name issue
 	if (!CommonHelper::GetValidePackageName(PackageName))
-		return NULL;
-
-#if 0
-	// Find if the texture exists in the current content path
-	UPackage* existingPackage = FindPackage(NULL, *PackageName);
-	UTexture* tex = FindObjectFast<UTexture>(existingPackage, *BaseName, false, false);
-	if (tex)
 	{
-		// If the texture doesn't match current setting, we need update it
-		bool changed = false;
-		if (tex->SRGB != isSRGB)
-		{
-			tex->SRGB = isSRGB;
-			changed = true;
-		}
-
-		if (tex->CompressionSettings != compSetting)
-		{
-			tex->CompressionSettings = compSetting;
-			changed = true;
-		}
-
-		if (changed)
-			tex->PostEditChange();
-
-		return tex;
+		return NULL;
 	}
-#endif
+
 	// Texture not found, create a new one by binary loading it and packing
 	// Try method 1, 2, 3. Early return if texture file not found
 	
@@ -112,12 +93,18 @@ UTexture* TextureManager::LoadTexture(const FString& TextureFilename, const FStr
 	if (isRelativePath)
 	{
 		if (path.IsEmpty())
+		{
 			Filename = FPaths::GameContentDir() + TEXT("../Data/") + TextureFilename;
+		}
 		else
+		{
 			Filename = path + TextureFilename;
+		}
 	}
 	else
+	{
 		Filename = TextureFilename;
+	}
 
 	FileSize = IFileManager::Get().FileSize(*Filename);
 	// If Method 1 failed, use Method 2 or 3
@@ -138,7 +125,8 @@ UTexture* TextureManager::LoadTexture(const FString& TextureFilename, const FStr
 				Filename = FPaths::GameContentDir() + TEXT("../Data/") + TextureFilename;
 				FileSize = IFileManager::Get().FileSize(*Filename);
 
-				if (FileSize == INDEX_NONE) {
+				if (FileSize == INDEX_NONE)
+				{
 					UE_LOG(ModoMaterialImporter, Log, TEXT("Texture '%s' is not found with compatibility mode"), *Filename);
 					return NULL;
 				}
